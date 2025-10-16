@@ -1,0 +1,44 @@
+# Node dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+.output/
+.nuxt/ # For Nuxt.js projects
+.next/ # For Next.js projects
+.nitro/ # For Nuxt.js projects
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local environment variables
+.env
+.env.*
+!.env.example # Keep example file for reference
+
+# IDE and OS files
+.idea/ # IntelliJ IDEA
+.vscode/ # VS Code settings (optional, if you want to ignore user-specific settings)
+*.iml # IntelliJ IDEA module files
+.DS_Store # macOS
+Thumbs.db # Windows
+
+# TypeScript specific
+*.js # Compiled JavaScript files
+*.js.map # Source maps for compiled JavaScript
+*.d.ts # Declaration files (if generated and not needed in source control)
+!src/**/*.d.ts # Exception: Keep declaration files in source directory if they are part of the source
+
+# Test coverage
+coverage/
+
+# Miscellaneous
+.cache/
+tmp/
+
+textbeedocs.md

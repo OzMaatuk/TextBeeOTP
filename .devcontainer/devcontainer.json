@@ -1,0 +1,50 @@
+{
+  "name": "ts_textbee_otp",
+  "build": {
+    "context": "..",
+    "dockerfile": "../Dockerfile",
+    "target": "development"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "firsttris.vscode-jest-runner",
+        "ms-azuretools.vscode-docker",
+        "redhat.vscode-yaml",
+        "mikestead.dotenv",
+        "ms-vscode-remote.remote-containers",
+        "esbenp.prettier-vscode"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "typescript.tsdk": "node_modules/typescript/lib",
+        "jest.autoRun": "off",
+        "[typescript]": {
+          "editor.defaultFormatter": "vscode.typescript-language-features"
+        },
+        "[javascript]": {
+          "editor.defaultFormatter": "vscode.typescript-language-features"
+        },
+        "terminal.integrated.cwd": "/workspace"
+      }
+    }
+  },
+  "forwardPorts": [3000],
+  "waitFor": "updateContentCommand",
+  "remoteUser": "vscode",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+  "workspaceFolder": "/workspace",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    },
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/common-utils:2.5.2": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "mounts": [
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"
+  ],
+  "runArgs": ["--env-file", ".env"]
+}
