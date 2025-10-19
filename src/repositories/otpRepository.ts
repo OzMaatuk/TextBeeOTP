@@ -1,5 +1,5 @@
 export type OtpRecord = {
-  phone: string;
+  recipient: string;
   code: string;
   expiresAt: number;
   createdAt?: number;
@@ -9,9 +9,9 @@ export type OtpRecord = {
 
 export interface IOtpRepository {
   save(record: OtpRecord): Promise<void>;
-  get(phone: string): Promise<(OtpRecord & { isExpired: () => boolean }) | null>;
-  delete(phone: string): Promise<void>;
-  // Per-phone rate limiting helpers
-  incrementSendAttempts(phone: string, windowSeconds: number): Promise<number>;
-  resetSendAttempts(phone: string): Promise<void>;
+  get(recipient: string): Promise<(OtpRecord & { isExpired: () => boolean }) | null>;
+  delete(recipient: string): Promise<void>;
+  // Per-recipient rate limiting helpers
+  incrementSendAttempts(recipient: string, windowSeconds: number): Promise<number>;
+  resetSendAttempts(recipient: string): Promise<void>;
 }

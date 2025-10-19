@@ -8,33 +8,33 @@ export class InMemoryOtpRepository implements IOtpRepository {
 
   async save(record: OtpRecord): Promise<void> {
     const createdAt = Date.now();
-    this.store.set(record.phone, { ...record, createdAt });
+    this.store.set(record.recipient, { ...record, createdAt });
   }
 
-  async get(phone: string): Promise<(OtpRecord & { isExpired: () => boolean }) | null> {
-    const rec = this.store.get(phone);
+  async get(recipient: string): Promise<(OtpRecord & { isExpired: () => boolean }) | null> {
+    const rec = this.store.get(recipient);
     if (!rec) return null;
     const isExpired = () => Date.now() > rec.expiresAt;
     return { ...rec, isExpired };
   }
 
-  async delete(phone: string): Promise<void> {
-    this.store.delete(phone);
+  async delete(recipient: string): Promise<void> {
+    this.store.delete(recipient);
   }
 
-  async incrementSendAttempts(phone: string, windowSeconds: number): Promise<number> {
+  async incrementSendAttempts(recipient: string, windowSeconds: number): Promise<number> {
     const now = Date.now();
-    const existing = this.attempts.get(phone);
+    const existing = this.attempts.get(recipient);
     if (!existing || existing.expiresAt < now) {
-      this.attempts.set(phone, { count: 1, expiresAt: now + windowSeconds * 1000 });
+      this.attempts.set(recipient, { count: 1, expiresAt: now + windowSeconds * 1000 });
       return 1;
     }
     existing.count += 1;
-    this.attempts.set(phone, existing);
+    this.attempts.set(recipient, existing);
     return existing.count;
   }
 
-  async resetSendAttempts(phone: string): Promise<void> {
-    this.attempts.delete(phone);
+  async resetSendAttempts(recipient: string): Promise<void> {
+    this.attempts.delete(recipient);
   }
 }

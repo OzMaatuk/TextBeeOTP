@@ -3,6 +3,7 @@
 Lightweight phone verification microservice using TextBee as SMS provider.
 
 Features:
+
 - POST /otp/send
 - POST /otp/verify
 
@@ -20,10 +21,9 @@ Development
 
 Tests
 
-   npm test
+npm test
 
 Docker
 
-   docker build -t textbee-otp .
-   docker run -p 3000:3000 --env-file .env textbee-otp
-
+docker build -t textbee-otp .
+docker run -p 3000:3000 --env-file .env textbee-otp

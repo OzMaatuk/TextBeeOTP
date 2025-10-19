@@ -1,35 +1,110 @@
 import { OtpService } from '../src/services/otpService';
 import { InMemoryOtpRepository } from '../src/repositories/inMemoryOtpRepo';
-import { ISmsProvider } from '../src/providers/smsProvider';
+import { IOtpProvider, OtpChannel } from '../src/providers/otpProvider';
 
-class MockProvider implements ISmsProvider {
+// A mock provider that implements the new generic interface
+class MockProvider implements IOtpProvider {
   public last: { recipient?: string; message?: string } = {};
-  async sendSms(recipient: string, message: string): Promise<void> {
+  public callCount = 0;
+
+  async sendOtp(recipient: string, message: string): Promise<void> {
     this.last = { recipient, message };
+    this.callCount++;
+  }
+
+  reset() {
+    this.last = {};
+    this.callCount = 0;
   }
 }
 
 describe('OtpService', () => {
-  it('generates and verifies OTP', async () => {
-    const repo = new InMemoryOtpRepository();
-    const prov = new MockProvider();
-    const svc = new OtpService(repo, prov as ISmsProvider);
+  let repo: InMemoryOtpRepository;
+  let smsProvider: MockProvider;
+  let emailProvider: MockProvider;
+  let svc: OtpService;
 
-    await svc.sendOTP('+1234567890');
-    const record = await repo.get('+1234567890');
+  beforeEach(() => {
+    // Setup fresh instances for each test
+    repo = new InMemoryOtpRepository();
+    smsProvider = new MockProvider();
+    emailProvider = new MockProvider();
+
+    const providers = new Map<OtpChannel, IOtpProvider>([
+      ['sms', smsProvider],
+      ['email', emailProvider],
+    ]);
+
+    svc = new OtpService(repo, providers);
+    process.env.OTP_LENGTH = '6';
+  });
+
+  it('sends OTP via SMS and verifies correctly', async () => {
+    const recipient = '+1234567890';
+    await svc.sendOTP(recipient, 'sms');
+
+    // Check if the correct provider was called
+    expect(smsProvider.callCount).toBe(1);
+    expect(smsProvider.last.recipient).toBe(recipient);
+    expect(emailProvider.callCount).toBe(0); // Ensure email provider was not called
+
+    // Check if the record was saved
+    const record = await repo.get(recipient);
     expect(record).not.toBeNull();
-    if (record) {
-      expect(record.code).toHaveLength(Number(process.env.OTP_LENGTH || 6));
-    }
+    expect(record?.code).toHaveLength(6);
 
-    // wrong code
-    let ok = await svc.verifyOTP('+1234567890', '000000');
+    // Verify wrong code fails
+    let ok = await svc.verifyOTP(recipient, '000000');
     expect(ok).toBe(false);
 
-    // correct code
+    // Verify correct code succeeds
     if (record) {
-      ok = await svc.verifyOTP('+1234567890', record.code);
+      ok = await svc.verifyOTP(recipient, record.code);
       expect(ok).toBe(true);
     }
+  });
+
+  it('sends OTP via email and verifies correctly', async () => {
+    const recipient = 'test@example.com';
+    await svc.sendOTP(recipient, 'email');
+
+    // Check if the correct provider was called
+    expect(emailProvider.callCount).toBe(1);
+    expect(emailProvider.last.recipient).toBe(recipient);
+    expect(smsProvider.callCount).toBe(0);
+
+    const record = await repo.get(recipient);
+    expect(record).not.toBeNull();
+
+    if (record) {
+      const ok = await svc.verifyOTP(recipient, record.code);
+      expect(ok).toBe(true);
+    }
+  });
+
+  it('throws an error for an unsupported channel', async () => {
+    const recipient = 'anybody';
+    // Cast to `any` to bypass TypeScript's enum check for testing purposes
+    const unsupportedChannel = 'whatsapp' as any;
+    await expect(svc.sendOTP(recipient, unsupportedChannel)).rejects.toThrow(
+      'Unsupported channel: whatsapp'
+    );
+  });
+
+  it('deletes the record after successful verification', async () => {
+    const recipient = '+1234567890';
+    await svc.sendOTP(recipient, 'sms');
+
+    const record = await repo.get(recipient);
+    expect(record).not.toBeNull();
+
+    if (record) {
+      const ok = await svc.verifyOTP(recipient, record.code);
+      expect(ok).toBe(true);
+    }
+
+    // After verification, the record should be gone
+    const recordAfterVerify = await repo.get(recipient);
+    expect(recordAfterVerify).toBeNull();
   });
 });

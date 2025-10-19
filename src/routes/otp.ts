@@ -4,47 +4,64 @@ import { OtpService } from '../services/otpService';
 import { InMemoryOtpRepository } from '../repositories/inMemoryOtpRepo';
 import { TextBeeAdapter } from '../providers/textbeeAdapter';
 import { RedisOtpRepository } from '../repositories/redisOtpRepo';
+import { EmailAdapter } from '../providers/emailAdapter';
+import { IOtpProvider, OtpChannel } from '../providers/otpProvider';
 
 const router = Router();
 
 const sendSchema = z.object({
-  phone: z.string().min(7).max(20),
+  recipient: z.string().min(5).max(50), // Can be phone or email
+  channel: z.enum(['sms', 'email']),
 });
 
 const verifySchema = z.object({
-  phone: z.string().min(7).max(20),
+  recipient: z.string().min(5).max(50),
   code: z.string().min(4).max(10),
 });
 
-// For simplicity, wire dependencies here. In larger apps use DI container.
-const repo = process.env.REDIS_URL ? new RedisOtpRepository(process.env.REDIS_URL) : new InMemoryOtpRepository();
-const provider = new TextBeeAdapter(process.env.TEXTBEE_API_KEY || '', process.env.TEXTBEE_DEVICE_ID || '', process.env.TEXTBEE_API_BASE || 'https://api.textbee.dev/api/v1');
-const otpService = new OtpService(repo, provider);
+// --- Dependency Injection ---
+const repo = process.env.REDIS_URL
+  ? new RedisOtpRepository(process.env.REDIS_URL)
+  : new InMemoryOtpRepository();
 
-router.post('/send', async (req: Request<unknown, unknown, { phone: string }>, res: Response) => {
+const providers = new Map<OtpChannel, IOtpProvider>();
+providers.set(
+  'sms',
+  new TextBeeAdapter(process.env.TEXTBEE_API_KEY || '', process.env.TEXTBEE_DEVICE_ID || '')
+);
+providers.set('email', new EmailAdapter());
+
+const otpService = new OtpService(repo, providers);
+// --------------------------
+
+router.post('/send', async (req: Request, res: Response) => {
   const parse = sendSchema.safeParse(req.body);
-  if (!parse.success) return res.status(400).json({ error: 'invalid_input', details: parse.error.format() });
+  if (!parse.success)
+    return res.status(400).json({ error: 'invalid_input', details: parse.error.format() });
+  const { recipient, channel } = parse.data;
 
   try {
-    await otpService.sendOTP(parse.data.phone);
+    await otpService.sendOTP(recipient, channel);
     return res.status(200).json({ status: 'sent' });
   } catch (err: any) {
     // eslint-disable-next-line no-console
     console.error(err);
     if (err && err.code === 'RATE_LIMITED') {
-      if (req.log) req.log.warn({ phone: parse.data.phone }, 'Rate limit exceeded for phone');
+      if (req.log) req.log.warn({ recipient }, 'Rate limit exceeded for recipient');
       return res.status(429).json({ error: 'rate_limited' });
     }
     return res.status(500).json({ error: 'internal_error' });
   }
 });
 
-router.post('/verify', async (req: Request<unknown, unknown, { phone: string; code: string }>, res: Response) => {
+router.post('/verify', async (req: Request, res: Response) => {
   const parse = verifySchema.safeParse(req.body);
-  if (!parse.success) return res.status(400).json({ error: 'invalid_input', details: parse.error.format() });
+  if (!parse.success)
+    return res.status(400).json({ error: 'invalid_input', details: parse.error.format() });
+  const { recipient, code } = parse.data;
 
   try {
-    const ok = await otpService.verifyOTP(parse.data.phone, parse.data.code);
+    const ok = await otpService.verifyOTP(recipient, code);
     if (!ok) return res.status(400).json({ error: 'invalid_code' });
     return res.status(200).json({ status: 'verified' });
   } catch (err: any) {

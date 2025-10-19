@@ -1,7 +1,7 @@
 import axios from 'axios';
-import { ISmsProvider } from './smsProvider';
+import { IOtpProvider } from './otpProvider';
 
-export class TextBeeAdapter implements ISmsProvider {
+export class TextBeeAdapter implements IOtpProvider {
   private apiKey: string;
   private deviceId: string;
   private baseUrl: string;
@@ -12,7 +12,7 @@ export class TextBeeAdapter implements ISmsProvider {
     this.baseUrl = baseUrl;
   }
 
-  async sendSms(recipient: string, message: string): Promise<void> {
+  async sendOtp(recipient: string, message: string): Promise<void> {
     if (!this.apiKey || !this.deviceId) {
       // In test/dev mode, just log
       // eslint-disable-next-line no-console
