@@ -6,6 +6,7 @@ import { TextBeeAdapter } from '../providers/textbeeAdapter';
 import { RedisOtpRepository } from '../repositories/redisOtpRepo';
 import { EmailAdapter } from '../providers/emailAdapter';
 import { IOtpProvider, OtpChannel } from '../providers/otpProvider';
+import { config } from '../utils/config';
 
 const router = Router();
 
@@ -20,16 +21,19 @@ const verifySchema = z.object({
 });
 
 // --- Dependency Injection ---
-const repo = process.env.REDIS_URL
-  ? new RedisOtpRepository(process.env.REDIS_URL)
+const repo = config.redisUrl
+  ? new RedisOtpRepository(config.redisUrl)
   : new InMemoryOtpRepository();
 
 const providers = new Map<OtpChannel, IOtpProvider>();
 providers.set(
   'sms',
-  new TextBeeAdapter(process.env.TEXTBEE_API_KEY || '', process.env.TEXTBEE_DEVICE_ID || '')
+  new TextBeeAdapter(config.textbeeApiKey || '', config.textbeeDeviceId || '')
 );
-providers.set('email', new EmailAdapter());
+providers.set('email', new EmailAdapter(
+  config.resendApiKey,
+  config.resendFromEmail
+));
 
 const otpService = new OtpService(repo, providers);
 // --------------------------

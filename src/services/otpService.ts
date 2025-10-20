@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { IOtpRepository } from '../repositories/otpRepository';
+import { config } from '../utils/config';
 import { IOtpProvider, OtpChannel } from '../providers/otpProvider';
 
 export class OtpService {
@@ -11,8 +12,8 @@ export class OtpService {
   constructor(repo: IOtpRepository, providers: Map<OtpChannel, IOtpProvider>) {
     this.repo = repo;
     this.providers = providers;
-    this.ttlSeconds = Number(process.env.OTP_TTL_SECONDS || 300);
-    this.length = Number(process.env.OTP_LENGTH || 6);
+    this.ttlSeconds = config.otpTtlSeconds;
+    this.length = config.otpLength;
   }
 
   private generateCode(): string {
@@ -27,8 +28,8 @@ export class OtpService {
       throw new Error(`Unsupported channel: ${channel}`);
     }
 
-    const windowSeconds = Math.ceil(Number(process.env.RATE_LIMIT_WINDOW_MS || 60_000) / 1000);
-    const maxAttempts = Number(process.env.RATE_LIMIT_MAX || 5);
+    const windowSeconds = Math.ceil(config.rateLimitWindowMs / 1000);
+    const maxAttempts = config.rateLimitMax;
 
     const existing = await this.repo.get(recipient);
     let code: string;

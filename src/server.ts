@@ -6,6 +6,7 @@ import { otpRouter } from './routes/otp';
 import swaggerUi from 'swagger-ui-express';
 import { openApiSpec } from './openapi';
 import { createLogger } from './utils/logger';
+import { config } from './utils/config';
 
 export function createServer(): Express {
   const app = express();
@@ -24,8 +25,8 @@ export function createServer(): Express {
   });
 
   const limiter = rateLimit({
-    windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS || 60_000),
-    max: Number(process.env.RATE_LIMIT_MAX || 5),
+    windowMs: config.rateLimitWindowMs,
+    max: config.rateLimitMax,
     standardHeaders: true,
     legacyHeaders: false,
   });
