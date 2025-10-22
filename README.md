@@ -110,3 +110,10 @@ curl -X POST http://localhost:3000/otp/verify \
   -H "Content-Type: application/json" \
   -d '{"recipient": "user@example.com", "code": "123456"}'
 ```
+
+### Use example script
+
+```bash
+./examples/otp_demo.sh send-email user@example.com
+./examples/otp_demo.sh verify user@example.com 123456
+```
