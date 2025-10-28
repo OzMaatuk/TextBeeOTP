@@ -1,6 +1,6 @@
 # OTP Service
 
-Lightweight verification microservice supporting both SMS (via TextBee) and Email (via Resend).
+Lightweight verification microservice supporting both SMS (via TextBee) and Email (via Zoho SMTP).
 
 ## Features
 
@@ -35,9 +35,14 @@ REDIS_URL=
 TEXTBEE_API_KEY=your_textbee_api_key_here
 TEXTBEE_DEVICE_ID=your_textbee_device_id_here
 
-# Email Provider (Resend)
-RESEND_API_KEY=your_resend_api_key_here
-RESEND_FROM_EMAIL=noreply@yourdomain.com
+# Email Provider (Zoho SMTP)
+EMAIL_FROM=noreply@yourdomain.com
+# SMTP (Zoho)
+SMTP_HOST=smtp.zoho.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=your_zoho_address@yourdomain.com
+SMTP_PASS=your_zoho_app_password
 
 # Server Configuration
 PORT=3000
@@ -52,12 +57,11 @@ NODE_ENV=development
 2. Get your API key and device ID
 3. Set `TEXTBEE_API_KEY` and `TEXTBEE_DEVICE_ID`
 
-### 2. Email Setup (Resend)
+### 2. Email Setup (Zoho SMTP)
 
-1. Sign up at [Resend](https://resend.com)
-2. Get your API key
-3. Set `RESEND_API_KEY` and `RESEND_FROM_EMAIL`
-4. Verify your domain in Resend dashboard
+1. Set up a Zoho Mail account and create an app password
+2. Set `SMTP_USER`, `SMTP_PASS`, and optionally `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`
+3. Set `EMAIL_FROM` to the sender address (usually same as `SMTP_USER`)
 
 ### 3. Development
 

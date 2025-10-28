@@ -31,12 +31,26 @@ export const config = {
         return process.env.TEXTBEE_DEVICE_ID || '';
     },
 
-    get resendApiKey() {
-        return process.env.RESEND_API_KEY;
+    // Email configuration (Zoho SMTP)
+    get emailFrom() {
+        return process.env.EMAIL_FROM || 'noreply@example.com';
     },
-    get resendFromEmail() {
-        return process.env.RESEND_FROM_EMAIL || 'noreply@example.com';
+    // SMTP (Zoho defaults)
+    get smtpHost() {
+        return process.env.SMTP_HOST || 'smtp.zoho.com';
+    },
+    get smtpPort() {
+        return Number(process.env.SMTP_PORT || 465);
+    },
+    get smtpSecure() {
+        const raw = process.env.SMTP_SECURE;
+        if (raw === undefined) return true; // default secure for port 465
+        return /^(1|true|yes)$/i.test(raw);
+    },
+    get smtpUser() {
+        return process.env.SMTP_USER || '';
+    },
+    get smtpPass() {
+        return process.env.SMTP_PASS || '';
     },
 };
-
-

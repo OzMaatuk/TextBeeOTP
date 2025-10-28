@@ -30,10 +30,7 @@ providers.set(
   'sms',
   new TextBeeAdapter(config.textbeeApiKey || '', config.textbeeDeviceId || '')
 );
-providers.set('email', new EmailAdapter(
-  config.resendApiKey,
-  config.resendFromEmail
-));
+providers.set('email', new EmailAdapter(undefined, config.emailFrom));
 
 const otpService = new OtpService(repo, providers);
 // --------------------------
