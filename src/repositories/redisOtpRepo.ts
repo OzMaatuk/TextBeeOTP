@@ -5,10 +5,16 @@ import { InMemoryOtpRepository } from './inMemoryOtpRepo';
 const ATTEMPT_PREFIX = 'otp:attempts:';
 const RECORD_PREFIX = 'otp:record:';
 
+const MAX_RETRY_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 1000;
+const CONNECTION_TIMEOUT_MS = 10000;
+
 export class RedisOtpRepository implements IOtpRepository {
   private client: Redis; // The type remains Redis, as ioredis-mock is compatible
   private fallback: InMemoryOtpRepository;
   private healthy: boolean;
+  private retryCount: number;
+  private redisDisabled: boolean;
 
   // MODIFICATION: Accept an optional client in the constructor
   constructor(client?: Redis);
@@ -16,23 +22,135 @@ export class RedisOtpRepository implements IOtpRepository {
   constructor(clientOrUrl?: Redis | string) {
     if (typeof clientOrUrl === 'object') {
       this.client = clientOrUrl;
+      // If using a mock client, assume it's healthy
+      this.healthy = true;
+      this.redisDisabled = false;
+      this.retryCount = 0;
     } else {
-      this.client = new Redis(clientOrUrl || process.env.REDIS_URL || 'redis://127.0.0.1:6379');
+      const redisUrl = clientOrUrl || process.env.REDIS_URL || 'redis://127.0.0.1:6379';
+      const self = this; // Capture reference for use in retryStrategy
+      
+      this.client = new Redis(redisUrl, {
+        maxRetriesPerRequest: 3,
+        retryStrategy: (times: number) => {
+          if (times > MAX_RETRY_ATTEMPTS) {
+            // After max retries, stop trying and use fallback
+            self.redisDisabled = true;
+            self.healthy = false;
+            // eslint-disable-next-line no-console
+            console.warn(`[RedisOtpRepository] Max retry attempts (${MAX_RETRY_ATTEMPTS}) reached. Disabling Redis and using in-memory storage.`);
+            return null; // Stop retrying
+          }
+          // Exponential backoff: 1s, 2s, 4s (capped at 10s)
+          const delay = Math.min(RETRY_DELAY_MS * Math.pow(2, times - 1), 10000);
+          // eslint-disable-next-line no-console
+          console.log(`[RedisOtpRepository] Retrying Redis connection (attempt ${times}/${MAX_RETRY_ATTEMPTS}) in ${delay}ms...`);
+          return delay;
+        },
+        connectTimeout: CONNECTION_TIMEOUT_MS,
+        enableOfflineQueue: false, // Don't queue commands when offline
+        reconnectOnError: (err: Error) => {
+          // Only reconnect on specific errors (not all errors)
+          const targetError = 'READONLY';
+          return err.message.includes(targetError);
+        },
+        enableReadyCheck: true,
+        maxLoadingTimeout: CONNECTION_TIMEOUT_MS,
+      });
+
+      this.healthy = false;
+      this.redisDisabled = false;
+      this.retryCount = 0;
     }
 
     this.fallback = new InMemoryOtpRepository();
-    this.healthy = true;
 
     this.client.on('error', (err: Error) => {
       // eslint-disable-next-line no-console
-      console.error('[RedisOtpRepository] Failed to connect to Redis:', err.message);
-      console.warn('[RedisOtpRepository] Falling back to in-memory storage');
+      console.error('[RedisOtpRepository] Redis error:', err.message);
       this.healthy = false;
     });
 
     this.client.on('ready', () => {
-      this.healthy = true;
+      if (!this.redisDisabled) {
+        // eslint-disable-next-line no-console
+        console.log('[RedisOtpRepository] Connected to Redis successfully');
+        this.healthy = true;
+        this.retryCount = 0;
+      }
     });
+
+    this.client.on('close', () => {
+      if (!this.redisDisabled) {
+        this.healthy = false;
+      }
+    });
+
+    // Monitor connection status
+    if (typeof clientOrUrl !== 'object') {
+      // Wait for initial connection attempt with timeout
+      this.attemptInitialConnection();
+    }
+  }
+
+  private async attemptInitialConnection(): Promise<void> {
+    // Use a promise that resolves when connected or times out
+    const connectionPromise = new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        this.retryCount++;
+        if (this.retryCount >= MAX_RETRY_ATTEMPTS) {
+          this.redisDisabled = true;
+          this.healthy = false;
+          // eslint-disable-next-line no-console
+          console.warn(
+            `[RedisOtpRepository] Failed to connect to Redis after ${MAX_RETRY_ATTEMPTS} attempts. Using in-memory storage.`
+          );
+        } else {
+          // eslint-disable-next-line no-console
+          console.warn(
+            `[RedisOtpRepository] Initial Redis connection timeout (attempt ${this.retryCount}/${MAX_RETRY_ATTEMPTS}). Will use in-memory storage.`
+          );
+        }
+        reject(new Error('Connection timeout'));
+      }, CONNECTION_TIMEOUT_MS);
+
+      // Check if already connected
+      if (this.client.status === 'ready') {
+        clearTimeout(timeout);
+        this.healthy = true;
+        resolve();
+        return;
+      }
+
+      // Wait for ready event
+      const onReady = () => {
+        clearTimeout(timeout);
+        this.client.removeListener('error', onError);
+        this.healthy = true;
+        this.retryCount = 0;
+        resolve();
+      };
+
+      const onError = (err: Error) => {
+        clearTimeout(timeout);
+        this.client.removeListener('ready', onReady);
+        this.healthy = false;
+        reject(err);
+      };
+
+      this.client.once('ready', onReady);
+      this.client.once('error', onError);
+    });
+
+    try {
+      await connectionPromise;
+      // Connection successful - will be logged in 'ready' event handler
+    } catch (err) {
+      // Connection failed - handled in promise
+      if (!this.redisDisabled) {
+        this.healthy = false;
+      }
+    }
   }
 
   // ... rest of the file is unchanged ...
@@ -45,7 +163,7 @@ export class RedisOtpRepository implements IOtpRepository {
   }
 
   async save(record: OtpRecord): Promise<void> {
-    if (!this.healthy) return this.fallback.save(record);
+    if (this.redisDisabled || !this.healthy) return this.fallback.save(record);
     try {
       const key = this.recordKey(record.recipient);
       await this.client.hmset(key, {
@@ -62,7 +180,7 @@ export class RedisOtpRepository implements IOtpRepository {
   }
 
   async get(recipient: string): Promise<(OtpRecord & { isExpired: () => boolean }) | null> {
-    if (!this.healthy) return this.fallback.get(recipient);
+    if (this.redisDisabled || !this.healthy) return this.fallback.get(recipient);
     try {
       const key = this.recordKey(recipient);
       const data = await this.client.hgetall(key);
@@ -82,7 +200,7 @@ export class RedisOtpRepository implements IOtpRepository {
   }
 
   async delete(recipient: string): Promise<void> {
-    if (!this.healthy) return this.fallback.delete(recipient);
+    if (this.redisDisabled || !this.healthy) return this.fallback.delete(recipient);
     try {
       const key = this.recordKey(recipient);
       await this.client.del(key);
@@ -93,7 +211,7 @@ export class RedisOtpRepository implements IOtpRepository {
   }
 
   async incrementSendAttempts(recipient: string, windowSeconds: number): Promise<number> {
-    if (!this.healthy) return this.fallback.incrementSendAttempts(recipient, windowSeconds);
+    if (this.redisDisabled || !this.healthy) return this.fallback.incrementSendAttempts(recipient, windowSeconds);
     try {
       const key = this.attemptKey(recipient);
       const tx = this.client.multi();
@@ -110,7 +228,7 @@ export class RedisOtpRepository implements IOtpRepository {
   }
 
   async resetSendAttempts(recipient: string): Promise<void> {
-    if (!this.healthy) return this.fallback.resetSendAttempts(recipient);
+    if (this.redisDisabled || !this.healthy) return this.fallback.resetSendAttempts(recipient);
     try {
       const key = this.attemptKey(recipient);
       await this.client.del(key);
