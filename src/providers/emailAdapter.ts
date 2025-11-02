@@ -1,5 +1,5 @@
 import { IOtpProvider } from './otpProvider';
-import createTransport, { Transporter } from 'nodemailer';
+import nodemailer, { Transporter } from 'nodemailer';
 import { config } from '../utils/config';
 
 export class EmailAdapter implements IOtpProvider {
@@ -10,7 +10,7 @@ export class EmailAdapter implements IOtpProvider {
   constructor(_unusedApiKey?: string, fromEmail?: string) {
     this.fromEmail = fromEmail || config.emailFrom;
     if (config.smtpUser && config.smtpPass) {
-      this.transporter = createTransport({
+      this.transporter = nodemailer.createTransport({
         host: config.smtpHost,
         port: config.smtpPort,
         secure: config.smtpSecure,
