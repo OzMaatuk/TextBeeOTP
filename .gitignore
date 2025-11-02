@@ -18,8 +18,6 @@ yarn-error.log*
 
 # Local environment variables
 .env
-.env.*
-!.env.example # Keep example file for reference
 
 # IDE and OS files
 .idea/ # IntelliJ IDEA
