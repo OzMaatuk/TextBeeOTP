@@ -24,7 +24,13 @@ declare module 'nodemailer' {
         }): Promise<SentMessageInfo>;
     }
 
-    export default function createTransport(options: TransportOptions): Transporter;
+    export function createTransport(options: TransportOptions): Transporter;
+    
+    const nodemailer: {
+        createTransport(options: TransportOptions): Transporter;
+    };
+    
+    export default nodemailer;
 }
 
 

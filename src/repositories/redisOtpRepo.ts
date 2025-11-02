@@ -55,7 +55,6 @@ export class RedisOtpRepository implements IOtpRepository {
           return err.message.includes(targetError);
         },
         enableReadyCheck: true,
-        maxLoadingTimeout: CONNECTION_TIMEOUT_MS,
       });
 
       this.healthy = false;
