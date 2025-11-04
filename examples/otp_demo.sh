@@ -8,7 +8,7 @@ if [ -f ".env" ]; then
   set +a
 fi
 
-BASE_URL="${BASE_URL:-http://localhost:3000}"
+BASE_URL="${BASE_URL:-http://localhost:3008}"
 
 send_sms() {
   local phone="${1:-+15555550123}"
