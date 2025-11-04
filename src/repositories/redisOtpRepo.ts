@@ -1,6 +1,7 @@
 import { IOtpRepository, OtpRecord } from './otpRepository';
 import Redis from 'ioredis';
 import { InMemoryOtpRepository } from './inMemoryOtpRepo';
+import pino from 'pino';
 
 const ATTEMPT_PREFIX = 'otp:attempts:';
 const RECORD_PREFIX = 'otp:record:';
@@ -15,11 +16,13 @@ export class RedisOtpRepository implements IOtpRepository {
   private healthy: boolean;
   private retryCount: number;
   private redisDisabled: boolean;
+  private logger?: pino.Logger;
 
   // MODIFICATION: Accept an optional client in the constructor
-  constructor(client?: Redis);
-  constructor(redisUrl?: string);
-  constructor(clientOrUrl?: Redis | string) {
+  constructor(client?: Redis, logger?: pino.Logger);
+  constructor(redisUrl?: string, logger?: pino.Logger);
+  constructor(clientOrUrl?: Redis | string, logger?: pino.Logger) {
+    this.logger = logger;
     if (typeof clientOrUrl === 'object') {
       this.client = clientOrUrl;
       // If using a mock client, assume it's healthy
@@ -37,14 +40,16 @@ export class RedisOtpRepository implements IOtpRepository {
             // After max retries, stop trying and use fallback
             self.redisDisabled = true;
             self.healthy = false;
-            // eslint-disable-next-line no-console
-            console.warn(`[RedisOtpRepository] Max retry attempts (${MAX_RETRY_ATTEMPTS}) reached. Disabling Redis and using in-memory storage.`);
+            if (self.logger) {
+              self.logger.warn({ maxAttempts: MAX_RETRY_ATTEMPTS }, '[RedisOtpRepository] Max retry attempts reached. Disabling Redis and using in-memory storage.');
+            }
             return null; // Stop retrying
           }
           // Exponential backoff: 1s, 2s, 4s (capped at 10s)
           const delay = Math.min(RETRY_DELAY_MS * Math.pow(2, times - 1), 10000);
-          // eslint-disable-next-line no-console
-          console.log(`[RedisOtpRepository] Retrying Redis connection (attempt ${times}/${MAX_RETRY_ATTEMPTS}) in ${delay}ms...`);
+          if (self.logger) {
+            self.logger.debug({ attempt: times, maxAttempts: MAX_RETRY_ATTEMPTS, delay }, '[RedisOtpRepository] Retrying Redis connection');
+          }
           return delay;
         },
         connectTimeout: CONNECTION_TIMEOUT_MS,
@@ -65,15 +70,17 @@ export class RedisOtpRepository implements IOtpRepository {
     this.fallback = new InMemoryOtpRepository();
 
     this.client.on('error', (err: Error) => {
-      // eslint-disable-next-line no-console
-      console.error('[RedisOtpRepository] Redis error:', err.message);
+      if (this.logger) {
+        this.logger.error({ err }, '[RedisOtpRepository] Redis error');
+      }
       this.healthy = false;
     });
 
     this.client.on('ready', () => {
       if (!this.redisDisabled) {
-        // eslint-disable-next-line no-console
-        console.log('[RedisOtpRepository] Connected to Redis successfully');
+        if (this.logger) {
+          this.logger.info('[RedisOtpRepository] Connected to Redis successfully');
+        }
         this.healthy = true;
         this.retryCount = 0;
       }
@@ -100,15 +107,13 @@ export class RedisOtpRepository implements IOtpRepository {
         if (this.retryCount >= MAX_RETRY_ATTEMPTS) {
           this.redisDisabled = true;
           this.healthy = false;
-          // eslint-disable-next-line no-console
-          console.warn(
-            `[RedisOtpRepository] Failed to connect to Redis after ${MAX_RETRY_ATTEMPTS} attempts. Using in-memory storage.`
-          );
+          if (this.logger) {
+            this.logger.warn({ retryCount: this.retryCount, maxAttempts: MAX_RETRY_ATTEMPTS }, '[RedisOtpRepository] Failed to connect to Redis after max attempts. Using in-memory storage.');
+          }
         } else {
-          // eslint-disable-next-line no-console
-          console.warn(
-            `[RedisOtpRepository] Initial Redis connection timeout (attempt ${this.retryCount}/${MAX_RETRY_ATTEMPTS}). Will use in-memory storage.`
-          );
+          if (this.logger) {
+            this.logger.warn({ retryCount: this.retryCount, maxAttempts: MAX_RETRY_ATTEMPTS }, '[RedisOtpRepository] Initial Redis connection timeout. Will use in-memory storage.');
+          }
         }
         reject(new Error('Connection timeout'));
       }, CONNECTION_TIMEOUT_MS);
@@ -235,5 +240,15 @@ export class RedisOtpRepository implements IOtpRepository {
       this.healthy = false;
       return this.fallback.resetSendAttempts(recipient);
     }
+  }
+
+  getHealthStatus(): { redis: 'connected' | 'disconnected' | 'disabled'; usingFallback: boolean } {
+    if (this.redisDisabled) {
+      return { redis: 'disabled', usingFallback: true };
+    }
+    return {
+      redis: this.healthy ? 'connected' : 'disconnected',
+      usingFallback: !this.healthy,
+    };
   }
 }

@@ -35,9 +35,14 @@ export function createServer(): Express {
 
   app.use('/otp', otpRouter);
 
-  app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
-
-  app.get('/health', (_req: express.Request, res: express.Response) => res.json({ status: 'ok' }));
+  app.get('/health', (_req: express.Request, res: express.Response) => {
+    const health: any = {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      redis: config.redisUrl ? 'configured' : 'not_configured',
+    };
+    res.json(health);
+  });
 
   return app;
 }

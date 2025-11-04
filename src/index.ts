@@ -4,12 +4,13 @@ dotenv.config();
 import { config } from './utils/config';
 
 import { createServer } from './server';
+import { createLogger } from './utils/logger';
 
 const port = config.port;
+const logger = createLogger();
 
 const app = createServer();
 
 app.listen(port, () => {
-  // eslint-disable-next-line no-console
-  console.log(`OTP service listening on port ${port}`);
+  logger.info({ port }, 'OTP service listening');
 });

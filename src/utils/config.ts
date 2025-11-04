@@ -1,23 +1,41 @@
+function validateNumber(value: number, name: string, min?: number, max?: number): number {
+    if (isNaN(value)) {
+        throw new Error(`Invalid ${name}: ${process.env[name]} is not a valid number`);
+    }
+    if (min !== undefined && value < min) {
+        throw new Error(`Invalid ${name}: ${value} is less than minimum ${min}`);
+    }
+    if (max !== undefined && value > max) {
+        throw new Error(`Invalid ${name}: ${value} is greater than maximum ${max}`);
+    }
+    return value;
+}
+
 export const config = {
     get port() {
-        return Number(process.env.PORT || 3000);
+        const val = Number(process.env.PORT || 3008);
+        return validateNumber(val, 'PORT', 1, 65535);
     },
     get nodeEnv() {
         return process.env.NODE_ENV || 'development';
     },
 
     get otpTtlSeconds() {
-        return Number(process.env.OTP_TTL_SECONDS || 300);
+        const val = Number(process.env.OTP_TTL_SECONDS || 300);
+        return validateNumber(val, 'OTP_TTL_SECONDS', 60, 3600);
     },
     get otpLength() {
-        return Number(process.env.OTP_LENGTH || 6);
+        const val = Number(process.env.OTP_LENGTH || 6);
+        return validateNumber(val, 'OTP_LENGTH', 4, 10);
     },
 
     get rateLimitWindowMs() {
-        return Number(process.env.RATE_LIMIT_WINDOW_MS || 60_000);
+        const val = Number(process.env.RATE_LIMIT_WINDOW_MS || 60_000);
+        return validateNumber(val, 'RATE_LIMIT_WINDOW_MS', 1000);
     },
     get rateLimitMax() {
-        return Number(process.env.RATE_LIMIT_MAX || 5);
+        const val = Number(process.env.RATE_LIMIT_MAX || 5);
+        return validateNumber(val, 'RATE_LIMIT_MAX', 1);
     },
 
     get redisUrl() {
@@ -40,7 +58,8 @@ export const config = {
         return process.env.SMTP_HOST || 'smtp.zoho.com';
     },
     get smtpPort() {
-        return Number(process.env.SMTP_PORT || 465);
+        const val = Number(process.env.SMTP_PORT || 465);
+        return validateNumber(val, 'SMTP_PORT', 1, 65535);
     },
     get smtpSecure() {
         const raw = process.env.SMTP_SECURE;

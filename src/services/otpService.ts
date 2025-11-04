@@ -17,8 +17,14 @@ export class OtpService {
   }
 
   private generateCode(): string {
-    const bytes = crypto.randomBytes(4).readUInt32BE(0);
     const max = 10 ** this.length;
+    // Use rejection sampling to eliminate modulo bias
+    // Find the largest multiple of max that fits in 32 bits
+    const maxSafe = Math.floor((2 ** 32) / max) * max;
+    let bytes: number;
+    do {
+      bytes = crypto.randomBytes(4).readUInt32BE(0);
+    } while (bytes >= maxSafe);
     return (bytes % max).toString().padStart(this.length, '0');
   }
 
@@ -30,6 +36,14 @@ export class OtpService {
 
     const windowSeconds = Math.ceil(config.rateLimitWindowMs / 1000);
     const maxAttempts = config.rateLimitMax;
+
+    // Check rate limit BEFORE sending to prevent wasted SMS/email
+    const attempts = await this.repo.incrementSendAttempts(recipient, windowSeconds);
+    if (attempts > maxAttempts) {
+      const err: any = new Error('rate_limited');
+      err.code = 'RATE_LIMITED';
+      throw err;
+    }
 
     const existing = await this.repo.get(recipient);
     let code: string;
@@ -43,14 +57,6 @@ export class OtpService {
       const expiresAt = Date.now() + this.ttlSeconds * 1000;
       await this.repo.save({ recipient, code, expiresAt });
       await provider.sendOtp(recipient, messageTemplate(code));
-    }
-
-    // Only increment attempts after successful send
-    const attempts = await this.repo.incrementSendAttempts(recipient, windowSeconds);
-    if (attempts > maxAttempts) {
-      const err: any = new Error('rate_limited');
-      err.code = 'RATE_LIMITED';
-      throw err;
     }
   }
 

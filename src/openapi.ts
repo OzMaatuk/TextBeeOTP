@@ -7,7 +7,7 @@ export const openApiSpec: OpenAPIV3.Document = {
     version: '1.0.0',
     description: 'Phone and Email verification microservice',
   },
-  servers: [{ url: 'http://localhost:3000' }],
+  servers: [{ url: 'http://localhost:3008' }],
   paths: {
     '/otp/send': {
       post: {

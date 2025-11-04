@@ -7,8 +7,10 @@ import { RedisOtpRepository } from '../repositories/redisOtpRepo';
 import { EmailAdapter } from '../providers/emailAdapter';
 import { IOtpProvider, OtpChannel } from '../providers/otpProvider';
 import { config } from '../utils/config';
+import { createLogger } from '../utils/logger';
 
 const router = Router();
+const logger = createLogger();
 
 const sendSchema = z.object({
   recipient: z.string().min(5).max(50), // Can be phone or email
@@ -22,15 +24,15 @@ const verifySchema = z.object({
 
 // --- Dependency Injection ---
 const repo = config.redisUrl
-  ? new RedisOtpRepository(config.redisUrl)
+  ? new RedisOtpRepository(config.redisUrl, logger)
   : new InMemoryOtpRepository();
 
 const providers = new Map<OtpChannel, IOtpProvider>();
 providers.set(
   'sms',
-  new TextBeeAdapter(config.textbeeApiKey || '', config.textbeeDeviceId || '')
+  new TextBeeAdapter(config.textbeeApiKey || '', config.textbeeDeviceId || '', undefined, logger)
 );
-providers.set('email', new EmailAdapter(undefined, config.emailFrom));
+providers.set('email', new EmailAdapter(undefined, config.emailFrom, logger));
 
 const otpService = new OtpService(repo, providers);
 // --------------------------
@@ -45,8 +47,9 @@ router.post('/send', async (req: Request, res: Response) => {
     await otpService.sendOTP(recipient, channel);
     return res.status(200).json({ status: 'sent' });
   } catch (err: any) {
-    // eslint-disable-next-line no-console
-    console.error(err);
+    if (req.log) {
+      req.log.error({ err, recipient, channel }, 'Error sending OTP');
+    }
     if (err && err.code === 'RATE_LIMITED') {
       if (req.log) req.log.warn({ recipient }, 'Rate limit exceeded for recipient');
       return res.status(429).json({ error: 'rate_limited' });
@@ -66,8 +69,9 @@ router.post('/verify', async (req: Request, res: Response) => {
     if (!ok) return res.status(400).json({ error: 'invalid_code' });
     return res.status(200).json({ status: 'verified' });
   } catch (err: any) {
-    // eslint-disable-next-line no-console
-    console.error(err);
+    if (req.log) {
+      req.log.error({ err, recipient }, 'Error verifying OTP');
+    }
     return res.status(500).json({ error: 'internal_error' });
   }
 });
