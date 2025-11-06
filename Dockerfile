@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1
 
 # Base stage for shared settings
-FROM node:20-slim AS base
+FROM node:20-alpine AS base
 RUN npm install -g npm@latest
-WORKDIR /app
+WORKDIR /workspace
 
 # Development stage
 FROM base AS development
