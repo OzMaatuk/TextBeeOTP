@@ -3,7 +3,7 @@ import express from 'express';
 import { OtpService } from '../src/services/otpService';
 import { TextBeeAdapter } from '../src/providers/textbeeAdapter';
 import { RedisOtpRepository } from '../src/repositories/redisOtpRepo';
-import Redis from 'ioredis'; // <-- FIX 1: Import the main Redis type
+import Redis from 'ioredis';
 import RedisMock from 'ioredis-mock';
 import { Router } from 'express';
 import { z } from 'zod';
@@ -65,7 +65,7 @@ function makeTestApp(repo: RedisOtpRepository) {
 describe('OTP API Integration (Redis)', () => {
   let app: express.Express;
   let repo: RedisOtpRepository;
-  let redisMock: Redis; // <-- FIX 2: Use the imported Redis type
+  let redisMock: Redis;
 
   beforeEach(() => {
     redisMock = new RedisMock();
