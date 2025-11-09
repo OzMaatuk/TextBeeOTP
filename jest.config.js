@@ -2,7 +2,7 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  modulePathIgnorePatterns: ['<rootDir>/dist/'],
+  coverageProvider: 'v8',
   setupFiles: ['dotenv/config'],
   collectCoverageFrom: ['src/**/*.ts'],
 };

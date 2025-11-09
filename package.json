@@ -4,7 +4,7 @@
   "description": "Phone verification microservice using TextBee",
   "main": "dist/index.js",
   "scripts": {
-    "clean": "rm -rf dist node_modules/ coverage",
+    "clean": "rm -rf dist coverage",
     "prebuild": "npm run clean",
     "build": "tsc -p .",
     "start": "node dist/index.js",
