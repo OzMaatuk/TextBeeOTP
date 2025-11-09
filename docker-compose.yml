@@ -3,18 +3,21 @@ version: '3.8'
 services:
   redis:
     image: redis:7-alpine
-    container_name: otp-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis-data:/data
-    command: redis-server --appendonly yes
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
+    container_name: otp_redis
     restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - '6379:6379'
+    networks:
+      - dev_network
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   app:
     build:
@@ -23,10 +26,10 @@ services:
       target: development
     container_name: otp-service
     ports:
-      - "3000:3000"
+      - '3008:3008'
     volumes:
-      - .:/workspace
-      - /workspace/node_modules
+      - .:/workspace:cached
+    working_dir: /workspace
     environment:
       - NODE_ENV=development
       - REDIS_URL=redis://redis:6379
@@ -35,7 +38,20 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-    restart: unless-stopped
+    networks:
+      - dev_network
+    command: sleep infinity
 
 volumes:
-  redis-data:
+  redis_data:
+    driver: local
+
+networks:
+  dev_network:
+    external: true
+    driver: bridge
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+        - subnet: fd01::/80

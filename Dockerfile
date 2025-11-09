@@ -1,45 +1,39 @@
 # syntax=docker/dockerfile:1
 
-# Base stage for shared settings
-FROM node:20-alpine AS base
+# Base image
+ARG NODE_VERSION=20
+FROM node:${NODE_VERSION}-alpine AS base
 RUN npm install -g npm@latest
+RUN npm install -g typescript ts-node
+RUN apk add --no-cache git
 WORKDIR /workspace
 
-# Development stage
+# Install dev dependencies in development stage
 FROM base AS development
 ENV NODE_ENV=development
-# Copy only package files first to cache dependencies
-COPY package*.json ./
-COPY tsconfig.json ./
-# Install all dependencies
+# Copy only package files first (caching)
+COPY package*.json tsconfig.json ./
+# Install dependencies
 RUN npm install
 # Copy source code
 COPY . .
-# Development server command
+# Default dev command
 CMD ["npm", "run", "dev"]
 
-# Builder stage
+# Production build stage
 FROM base AS builder
 ENV NODE_ENV=production
-# Copy only package files first to cache dependencies
-COPY package*.json ./
-COPY tsconfig.json ./
-# Install all dependencies for building
+COPY package*.json tsconfig.json ./
 RUN npm install
-# Copy source code
 COPY . .
-# Build the application
 RUN npm run build
 
-# Production stage
+# Production runtime
 FROM base AS production
 ENV NODE_ENV=production
 WORKDIR /app
-# Copy package files
 COPY package*.json ./
-# Install only production dependencies
 RUN npm install --omit=dev
-# Copy built files from builder
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /workspace/dist ./dist
 EXPOSE 3000
 CMD ["node", "dist/index.js"]
