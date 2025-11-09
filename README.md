@@ -29,7 +29,10 @@ RATE_LIMIT_WINDOW_MS=60000
 RATE_LIMIT_MAX=5
 
 # Redis (optional - falls back to in-memory if not set)
-REDIS_URL=
+# For Redis Cloud (redis.io): use rediss:// protocol for TLS
+REDIS_URL=rediss://default:password@redis-12345.redis.io:12345
+# For local Redis without TLS:
+# REDIS_URL=redis://localhost:6379
 
 # SMS Provider (TextBee)
 TEXTBEE_API_KEY=your_textbee_api_key_here
@@ -63,7 +66,27 @@ NODE_ENV=development
 2. Set `SMTP_USER`, `SMTP_PASS`, and optionally `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`
 3. Set `EMAIL_FROM` to the sender address (usually same as `SMTP_USER`)
 
-### 3. Development
+### 3. Redis Setup (Optional)
+
+Redis is optional - the service falls back to in-memory storage if not configured.
+
+#### Redis Cloud (redis.io)
+
+1. Create a free database at [redis.io](https://redis.io)
+2. Get your connection details from the dashboard
+3. Set the connection URL (use `rediss://` with double 's' for TLS):
+   ```bash
+   REDIS_URL=rediss://default:your_password@redis-12345.redis.io:12345
+   ```
+
+#### Local Redis
+
+For local development:
+```bash
+REDIS_URL=redis://localhost:6379
+```
+
+### 4. Development
 
 1. Install dependencies
 

@@ -18,7 +18,6 @@ export class RedisOtpRepository implements IOtpRepository {
   private redisDisabled: boolean;
   private logger?: pino.Logger;
 
-  // MODIFICATION: Accept an optional client in the constructor
   constructor(client?: Redis, logger?: pino.Logger);
   constructor(redisUrl?: string, logger?: pino.Logger);
   constructor(clientOrUrl?: Redis | string, logger?: pino.Logger) {
@@ -30,9 +29,9 @@ export class RedisOtpRepository implements IOtpRepository {
       this.redisDisabled = false;
       this.retryCount = 0;
     } else {
+      const self = this;
       const redisUrl = clientOrUrl || process.env.REDIS_URL || 'redis://127.0.0.1:6379';
-      const self = this; // Capture reference for use in retryStrategy
-      
+
       this.client = new Redis(redisUrl, {
         maxRetriesPerRequest: 3,
         retryStrategy: (times: number) => {
