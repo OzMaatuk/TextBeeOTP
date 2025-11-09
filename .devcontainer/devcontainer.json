@@ -1,46 +1,27 @@
 {
-  "name": "ts_textbee_otp",
-  "build": {
-    "context": "..",
-    "dockerfile": "../Dockerfile",
-    "target": "development"
-  },
+  "name": "OTP Service Dev Container",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
   "customizations": {
     "vscode": {
       "extensions": [
         "dbaeumer.vscode-eslint",
-        "firsttris.vscode-jest-runner",
+        "esbenp.prettier-vscode",
         "ms-azuretools.vscode-docker",
-        "redhat.vscode-yaml",
-        "mikestead.dotenv",
-        "ms-vscode-remote.remote-containers",
-        "esbenp.prettier-vscode"
+        "firsttris.vscode-jest-runner"
       ],
       "settings": {
         "editor.formatOnSave": true,
-        "typescript.tsdk": "node_modules/typescript/lib",
-        "jest.autoRun": "off",
-        "[typescript]": {
-          "editor.defaultFormatter": "vscode.typescript-language-features"
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
         },
-        "[javascript]": {
-          "editor.defaultFormatter": "vscode.typescript-language-features"
-        },
-        "terminal.integrated.cwd": "/workspace"
+        "typescript.tsdk": "node_modules/typescript/lib"
       }
     }
   },
-  "forwardPorts": [3008],
-  "waitFor": "updateContentCommand",
-  "remoteUser": "vscode",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
-  "workspaceFolder": "/workspace",
-  "features": {
-    "ghcr.io/devcontainers/features/git:1": {},
-    "ghcr.io/devcontainers/features/common-utils:2.5.2": {}
-  },
-  "mounts": [
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"
-  ],
-  "runArgs": ["--env-file", ".env"]
+  "forwardPorts": [3000, 6379],
+  "postCreateCommand": "npm install",
+  "remoteUser": "node"
 }
