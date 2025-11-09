@@ -44,5 +44,13 @@ export function createServer(): Express {
     res.json(health);
   });
 
+  app.get('/health/redis', (_req: express.Request, res: express.Response) => {
+    // This endpoint will be enhanced by the route that has access to the repo
+    res.json({
+      redisUrl: config.redisUrl ? config.redisUrl.replace(/:[^:@]+@/, ':****@') : null,
+      configured: !!config.redisUrl,
+    });
+  });
+
   return app;
 }
