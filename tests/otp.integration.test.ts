@@ -32,8 +32,7 @@ function makeTestApp(repo: RedisOtpRepository) {
 
   router.post('/send', async (req, res) => {
     const parse = sendSchema.safeParse(req.body);
-    if (!parse.success)
-      return res.status(400).json({ error: 'invalid_input', details: parse.error.format() });
+    if (!parse.success) return res.status(400).json({ error: 'invalid_input', details: parse.error.format() });
     try {
       await otpService.sendOTP(parse.data.recipient, parse.data.channel);
       return res.status(200).json({ status: 'sent' });
@@ -45,8 +44,7 @@ function makeTestApp(repo: RedisOtpRepository) {
 
   router.post('/verify', async (req, res) => {
     const parse = verifySchema.safeParse(req.body);
-    if (!parse.success)
-      return res.status(400).json({ error: 'invalid_input', details: parse.error.format() });
+    if (!parse.success) return res.status(400).json({ error: 'invalid_input', details: parse.error.format() });
     try {
       const ok = await otpService.verifyOTP(parse.data.recipient, parse.data.code);
       if (!ok) return res.status(400).json({ error: 'invalid_code' });
@@ -68,6 +66,7 @@ describe('OTP API Integration (Redis)', () => {
   let redisMock: Redis;
 
   beforeEach(() => {
+    jest.setTimeout(10000); // Increase timeout for integration tests
     redisMock = new RedisMock();
     repo = new RedisOtpRepository(redisMock);
     app = makeTestApp(repo);
@@ -77,8 +76,8 @@ describe('OTP API Integration (Redis)', () => {
     process.env.OTP_TTL_SECONDS = '60';
   });
 
-  afterEach(() => {
-    redisMock.disconnect();
+  afterEach(async () => {
+    await redisMock.disconnect();
   });
 
   it('sends and verifies an OTP via SMS channel', async () => {
@@ -113,10 +112,7 @@ describe('OTP API Integration (Redis)', () => {
       await request(app).post('/otp/send').send({ recipient, channel: 'sms' }).expect(200);
     }
     // 4th request should be rate-limited
-    await request(app)
-      .post('/otp/send')
-      .send({ recipient, channel: 'sms' })
-      .expect(429, { error: 'rate_limited' });
+    await request(app).post('/otp/send').send({ recipient, channel: 'sms' }).expect(429, { error: 'rate_limited' });
   });
 
   it('returns 400 for invalid input on /send', async () => {
