@@ -3,7 +3,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import pino from 'pino';
 import { otpRouter } from './routes/otp';
-import swaggerUi from 'swagger-ui-express';
+
 import { openApiSpec } from './openapi';
 import { createLogger } from './utils/logger';
 import { config } from './utils/config';
@@ -14,8 +14,11 @@ export function createServer(): Express {
   app.use(express.json());
 
   // OpenAPI documentation
-  app.use('/api-docs', swaggerUi.serve);
-  app.get('/api-docs', swaggerUi.setup(openApiSpec));
+  if (config.nodeEnv !== 'production') {
+    const swaggerUi = require('swagger-ui-express');
+    app.use('/api-docs', swaggerUi.serve);
+    app.get('/api-docs', swaggerUi.setup(openApiSpec));
+  }
 
   const logger = createLogger();
   app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
