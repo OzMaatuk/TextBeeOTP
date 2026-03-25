@@ -10,6 +10,7 @@ import { config } from './utils/config';
 
 export function createServer(): Express {
   const app = express();
+  app.set('trust proxy', 1);
   app.use(helmet());
   app.use(express.json());
 
