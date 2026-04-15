@@ -12,7 +12,7 @@ describe('TextBeeAdapter', () => {
   });
 
   it('throws a provider error when the upstream sms request fails', async () => {
-    mockedAxios.post.mockRejectedValueOnce(new Error('gateway down'));
+    jest.mocked(axios.post).mockRejectedValueOnce(new Error('gateway down'));
 
     const adapter = new TextBeeAdapter('api-key', 'device-id', 'https://example.test', pino());
 

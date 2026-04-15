@@ -1,21 +1,26 @@
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 import express, { Router, Request, Response } from 'express';
 import path from 'path';
 import fs from 'fs/promises';
 import { config } from '../utils/config.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// Use process.cwd() to find views directory relative to project root
+// This avoids import.meta.url issues in some test environments
+const projectRoot = process.cwd();
+const getViewsDir = () => {
+  // Check if we are running from dist or src
+  const isDist = projectRoot.endsWith('dist') || projectRoot.includes('/dist');
+  return path.join(projectRoot, isDist ? 'views' : 'src/views');
+};
+const _viewsDir = getViewsDir();
 
 export function createUiRouter(): Router {
   const router = Router();
 
   // Serve static JS files from views directory
-  router.use('/views', express.static(path.join(__dirname, '../views')));
+  router.use('/views', express.static(_viewsDir));
 
   router.get('/login', async (_req: Request, res: Response) => {
-    const filePath = path.join(__dirname, '../views/login.html');
+    const filePath = path.join(_viewsDir, 'login.html');
     let html = await fs.readFile(filePath, 'utf-8');
     
     if (!config.enableOidc) {
@@ -29,7 +34,7 @@ export function createUiRouter(): Router {
   });
 
   router.get('/verify', (_req: Request, res: Response) => {
-    const filePath = path.join(__dirname, '../views/verify.html');
+    const filePath = path.join(_viewsDir, 'verify.html');
     res.sendFile(filePath);
   });
 
