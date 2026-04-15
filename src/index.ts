@@ -1,11 +1,13 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import { fileURLToPath } from 'url';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 // Validate env and expose normalized config
-import { config } from './utils/config';
+import { config } from './utils/config.js';
 
-import { createServer } from './server';
-import { createLogger } from './utils/logger';
+import { createServer } from './server.js';
+import { createLogger } from './utils/logger.js';
 
 const port = config.port;
 const logger = createLogger();

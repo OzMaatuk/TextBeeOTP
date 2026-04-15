@@ -2,6 +2,7 @@
   "name": "textbee-otp-service",
   "version": "0.1.0",
   "description": "Phone verification microservice using TextBee",
+  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "clean": "rm -rf dist coverage",

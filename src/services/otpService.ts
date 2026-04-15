@@ -1,9 +1,9 @@
 import crypto from 'crypto';
-import { IOtpRepository } from '../repositories/otpRepository';
-import { config } from '../utils/config';
-import { IOtpProvider, OtpChannel } from '../providers/otpProvider';
-import { hashOtp, timingSafeOtpEqual } from '../utils/otpCrypto';
-import { normalizeRecipient } from '../utils/recipient';
+import { IOtpRepository } from '../repositories/otpRepository.js';
+import { config } from '../utils/config.js';
+import { IOtpProvider, OtpChannel } from '../providers/otpProvider.js';
+import { hashOtp, timingSafeOtpEqual } from '../utils/otpCrypto.js';
+import { normalizeRecipient } from '../utils/recipient.js';
 
 type RateLimitedError = Error & { code: 'RATE_LIMITED' };
 

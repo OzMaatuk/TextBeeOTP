@@ -1,4 +1,4 @@
-import { IOtpRepository, OtpRecord } from './otpRepository';
+import { IOtpRepository, OtpRecord } from './otpRepository.js';
 
 type InternalRecord = OtpRecord & { createdAt: number };
 

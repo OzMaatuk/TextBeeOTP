@@ -1,6 +1,6 @@
-import { IOtpRepository, OtpRecord } from './otpRepository';
+import { IOtpRepository, OtpRecord } from './otpRepository.js';
 import Redis from 'ioredis';
-import { InMemoryOtpRepository } from './inMemoryOtpRepo';
+import { InMemoryOtpRepository } from './inMemoryOtpRepo.js';
 import pino from 'pino';
 
 const ATTEMPT_PREFIX = 'otp:attempts:';

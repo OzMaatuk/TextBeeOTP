@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { config } from './config';
+import { config } from './config.js';
 
 export function hashOtp(recipient: string, code: string): string {
   return crypto.createHmac('sha256', config.otpSecret).update(`${recipient}:${code}`).digest('hex');

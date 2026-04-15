@@ -1,8 +1,6 @@
-import Provider from 'oidc-provider';
 import { Express } from 'express';
-import { v4 as uuidv4 } from 'uuid';
-import { config } from '../utils/config';
-import { createLogger } from '../utils/logger';
+import { config } from '../utils/config.js';
+import { createLogger } from '../utils/logger.js';
 
 const logger = createLogger();
 
@@ -26,7 +24,9 @@ const externalAccounts = new Map<string, ExternalAccount>();
  *
  * For OTP-based authentication, use the /otp endpoints directly.
  */
-export function createOidcProvider(app: Express): Provider {
+export async function createOidcProvider(app: Express): Promise<any> {
+  const { default: Provider } = await import('oidc-provider');
+  const { v4: uuidv4 } = await import('uuid');
   const baseUrl = config.oidcServerUrl || `http://localhost:${config.port}`;
   const clientId = config.oidcClientId || 'oauth2-proxy';
   const clientSecret = config.oidcClientSecret || uuidv4();

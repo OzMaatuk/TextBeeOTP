@@ -1,12 +1,12 @@
 import express, { Express } from 'express';
 import helmet from 'helmet';
 import swaggerUi from 'swagger-ui-express';
-import { createOtpRouter } from './routes/otp';
-import { createUiRouter } from './routes/ui';
-import { openApiSpec } from './openapi';
-import { createLogger } from './utils/logger';
-import { config } from './utils/config';
-import { createOtpService } from './bootstrap';
+import { createOtpRouter } from './routes/otp.js';
+import { createUiRouter } from './routes/ui.js';
+import { openApiSpec } from './openapi.js';
+import { createLogger } from './utils/logger.js';
+import { config } from './utils/config.js';
+import { createOtpService } from './bootstrap.js';
 import { IOtpRepository } from './repositories/otpRepository';
 
 export interface ServerInstance {
@@ -44,18 +44,20 @@ export function createServer(): ServerInstance {
   // Setup OIDC provider (only if enabled and not in test mode)
   // OIDC is for external authentication (Google, Facebook, etc.) via oauth2-proxy
   if (config.enableOidc && process.env.NODE_ENV !== 'test') {
-    try {
-      const { createOidcProvider } = require('./oidc/provider');
-      const { createOidcRoutes } = require('./oidc/routes');
-      createOidcProvider(app);
-      app.use('/oauth2', createOidcRoutes());
-      logger.info(
-        { clientId: config.oidcClientId, issuer: config.oidcServerUrl },
-        'OIDC provider enabled for external authentication'
-      );
-    } catch (err) {
-      logger.warn({ err }, 'Failed to initialize OIDC provider');
-    }
+    (async () => {
+      try {
+        const { createOidcProvider } = await import('./oidc/provider.js');
+        const { createOidcRoutes } = await import('./oidc/routes.js');
+        await createOidcProvider(app);
+        app.use('/oauth2', createOidcRoutes());
+        logger.info(
+          { clientId: config.oidcClientId, issuer: config.oidcServerUrl },
+          'OIDC provider enabled for external authentication'
+        );
+      } catch (err) {
+        logger.warn({ err }, 'Failed to initialize OIDC provider');
+      }
+    })();
   }
 
   app.get('/health', (_req: express.Request, res: express.Response) => {

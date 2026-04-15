@@ -1,10 +1,10 @@
 import { Router, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
-import { OtpService } from '../services/otpService';
-import { config } from '../utils/config';
-import { IOtpRepository } from '../repositories/otpRepository';
-import { IOtpProvider, OtpChannel } from '../providers/otpProvider';
-import { sendSchema, verifySchema } from '../schemas/otp';
+import { OtpService } from '../services/otpService.js';
+import { config } from '../utils/config.js';
+import { IOtpRepository } from '../repositories/otpRepository.js';
+import { IOtpProvider, OtpChannel } from '../providers/otpProvider.js';
+import { sendSchema, verifySchema } from '../schemas/otp.js';
 
 function isRateLimitedError(error: unknown): error is { code: string } {
   return typeof error === 'object' && error !== null && 'code' in error;

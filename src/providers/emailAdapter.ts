@@ -1,6 +1,6 @@
-import { IOtpProvider } from './otpProvider';
+import { IOtpProvider } from './otpProvider.js';
 import nodemailer, { Transporter } from 'nodemailer';
-import { config } from '../utils/config';
+import { config } from '../utils/config.js';
 import pino from 'pino';
 
 export class EmailAdapter implements IOtpProvider {

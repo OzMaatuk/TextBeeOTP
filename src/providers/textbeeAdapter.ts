@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { IOtpProvider } from './otpProvider';
+import { IOtpProvider } from './otpProvider.js';
 import pino from 'pino';
 
 export class TextBeeAdapter implements IOtpProvider {

@@ -1,11 +1,11 @@
-import { OtpService } from './services/otpService';
-import { InMemoryOtpRepository } from './repositories/inMemoryOtpRepo';
-import { RedisOtpRepository } from './repositories/redisOtpRepo';
-import { EmailAdapter } from './providers/emailAdapter';
-import { TextBeeAdapter } from './providers/textbeeAdapter';
-import { IOtpProvider, OtpChannel } from './providers/otpProvider';
-import { config } from './utils/config';
-import { createLogger } from './utils/logger';
+import { OtpService } from './services/otpService.js';
+import { InMemoryOtpRepository } from './repositories/inMemoryOtpRepo.js';
+import { RedisOtpRepository } from './repositories/redisOtpRepo.js';
+import { EmailAdapter } from './providers/emailAdapter.js';
+import { TextBeeAdapter } from './providers/textbeeAdapter.js';
+import { IOtpProvider, OtpChannel } from './providers/otpProvider.js';
+import { config } from './utils/config.js';
+import { createLogger } from './utils/logger.js';
 
 export function createOtpService() {
   const logger = createLogger();
