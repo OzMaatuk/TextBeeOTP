@@ -73,7 +73,8 @@ form.addEventListener('submit', async (e) => {
   errorMessage.classList.remove('show');
 
   try {
-    const response = await fetch('/otp/verify', {
+    const baseUrl = window.API_BASE_URL || '';
+    const response = await fetch(baseUrl + '/otp/verify', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

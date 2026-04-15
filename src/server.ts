@@ -10,36 +10,58 @@ import { createOtpService } from './bootstrap.js';
 import { IOtpRepository } from './repositories/otpRepository';
 
 export interface ServerInstance {
-  app: Express;
+  apiApp: Express;
+  uiApp: Express;
   repo: IOtpRepository;
 }
 
 export function createServer(): ServerInstance {
-  const app = express();
-  app.set('trust proxy', 1);
+  const apiApp = express();
+  apiApp.set('trust proxy', 1);
 
-  app.use(helmet());
-  app.use(express.json({ limit: config.jsonBodyLimit }));
-  app.use(express.urlencoded({ extended: false, limit: config.jsonBodyLimit }));
+  apiApp.use(helmet());
+  apiApp.use(express.json({ limit: config.jsonBodyLimit }));
+  apiApp.use(express.urlencoded({ extended: false, limit: config.jsonBodyLimit }));
+
+  // Add basic CORS rules to allow the separate UI app to make cross-origin API calls locally
+  apiApp.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+    // Note: In production you should restrict this to your actual UI domain
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    if (req.method === 'OPTIONS') {
+      res.sendStatus(200);
+      return;
+    }
+    next();
+  });
 
   // OpenAPI documentation
   if (config.exposeDocs) {
-    app.use('/api-docs', swaggerUi.serve);
-    app.get('/api-docs', swaggerUi.setup(openApiSpec));
+    apiApp.use('/api-docs', swaggerUi.serve);
+    apiApp.get('/api-docs', swaggerUi.setup(openApiSpec));
   }
 
   const logger = createLogger();
   const { otpService, repo, providers } = createOtpService();
-  app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+  apiApp.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
     req.log = logger;
     next();
   });
 
   // OTP endpoints - standalone authentication via /otp/send and /otp/verify
-  app.use('/otp', createOtpRouter({ otpService, repo, providers }));
+  apiApp.use('/otp', createOtpRouter({ otpService, repo, providers }));
 
+  // Create separate UI Application
+  const uiApp = express();
+  uiApp.set('trust proxy', 1);
+  uiApp.use(helmet());
+  uiApp.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+    req.log = logger;
+    next();
+  });
   // UI routes for OTP login and verification
-  app.use('/', createUiRouter());
+  uiApp.use('/', createUiRouter());
 
   // Setup OIDC provider (only if enabled and not in test mode)
   // OIDC is for external authentication (Google, Facebook, etc.) via oauth2-proxy
@@ -48,8 +70,8 @@ export function createServer(): ServerInstance {
       try {
         const { createOidcProvider } = await import('./oidc/provider.js');
         const { createOidcRoutes } = await import('./oidc/routes.js');
-        await createOidcProvider(app);
-        app.use('/oauth2', createOidcRoutes());
+        await createOidcProvider(apiApp);
+        apiApp.use('/oauth2', createOidcRoutes());
         logger.info(
           { clientId: config.oidcClientId, issuer: config.oidcServerUrl },
           'OIDC provider enabled for external authentication'
@@ -60,7 +82,7 @@ export function createServer(): ServerInstance {
     })();
   }
 
-  app.get('/health', (_req: express.Request, res: express.Response) => {
+  apiApp.get('/health', (_req: express.Request, res: express.Response) => {
     res.json({
       status: 'ok',
       timestamp: new Date().toISOString(),
@@ -73,10 +95,15 @@ export function createServer(): ServerInstance {
     });
   });
 
-  app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  apiApp.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     req.log.error({ err }, 'Unhandled request error');
     res.status(500).json({ error: 'internal_error' });
   });
 
-  return { app, repo };
+  uiApp.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    req.log.error({ err }, 'Unhandled request error');
+    res.status(500).json({ error: 'internal_error' });
+  });
+
+  return { apiApp, uiApp, repo };
 }

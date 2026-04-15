@@ -20,8 +20,8 @@ describe('createServer', () => {
   it('returns service health information', async () => {
     process.env.NODE_ENV = 'test';
 
-    const { app } = createServer();
-    const response = await request(app).get('/health').expect(200);
+    const { apiApp } = createServer();
+    const response = await request(apiApp).get('/health').expect(200);
 
     expect(response.body.status).toBe('ok');
     expect(response.body.environment).toBe('test');
@@ -36,7 +36,7 @@ describe('createServer', () => {
     process.env.SMTP_USER = 'test@example.com';
     process.env.SMTP_PASS = 'test-password';
 
-    const { app } = createServer();
-    await request(app).get('/api-docs').expect(404);
+    const { apiApp } = createServer();
+    await request(apiApp).get('/api-docs').expect(404);
   });
 });

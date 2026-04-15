@@ -95,7 +95,8 @@ form.addEventListener('submit', async (e) => {
   errorMessage.classList.remove('show');
 
   try {
-    const response = await fetch('/otp/send', {
+    const baseUrl = window.API_BASE_URL || '';
+    const response = await fetch(baseUrl + '/otp/send', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

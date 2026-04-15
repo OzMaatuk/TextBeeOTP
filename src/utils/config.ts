@@ -31,9 +31,13 @@ function readOtpSecret(): string {
 }
 
 export const config = {
-  get port() {
-    const val = Number(process.env.PORT || 3008);
-    return validateNumber(val, 'PORT', 1, 65535);
+  get apiPort() {
+    const val = Number(process.env.API_PORT || process.env.PORT || 3008);
+    return validateNumber(val, 'API_PORT', 1, 65535);
+  },
+  get uiPort() {
+    const val = Number(process.env.UI_PORT || 8080);
+    return validateNumber(val, 'UI_PORT', 1, 65535);
   },
   get nodeEnv() {
     return process.env.NODE_ENV || 'development';

@@ -35,7 +35,7 @@ const externalAccounts = new Map<string, ExternalAccount>();
 export async function createOidcProvider(app: Express): Promise<any> {
   const { default: Provider } = await import('oidc-provider');
   const { v4: uuidv4 } = await import('uuid');
-  const baseUrl = config.oidcServerUrl || `http://localhost:${config.port}`;
+  const baseUrl = config.oidcServerUrl || `http://localhost:${config.apiPort}`;
   const clientId = config.oidcClientId || 'oauth2-proxy';
   const clientSecret = config.oidcClientSecret || uuidv4();
 

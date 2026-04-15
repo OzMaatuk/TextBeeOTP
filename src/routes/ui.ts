@@ -16,6 +16,11 @@ const _viewsDir = getViewsDir();
 export function createUiRouter(): Router {
   const router = Router();
 
+  // Redirect root to login page
+  router.get('/', (_req: Request, res: Response) => {
+    res.redirect('/login');
+  });
+
   // Serve static JS files from views directory
   router.use('/views', express.static(_viewsDir));
 
@@ -23,11 +28,20 @@ export function createUiRouter(): Router {
     const filePath = path.join(_viewsDir, 'login.html');
     let html = await fs.readFile(filePath, 'utf-8');
     
+    let injections = '';
+    
+    // Pass the API endpoint to the frontend JS to handle the port separation correctly
+    const protocol = _req.secure ? 'https' : 'http';
+    const publicApiUrl = process.env.API_PUBLIC_URL || `${protocol}://localhost:${config.apiPort}`;
+    injections += `<script>window.API_BASE_URL = '${publicApiUrl}';</script>`;
+
     if (!config.enableOidc) {
-      // Remove social login buttons when OIDC is disabled
-      const socialSectionRegex = /(<div class="divider">OR<\/div>\s*<button type="button" class="method-btn method-social google" id="googleBtn">[\s\S]*?<\/button>\s*<button type="button" class="method-btn method-social facebook" id="facebookBtn">[\s\S]*?<\/button>)/;
-      html = html.replace(socialSectionRegex, '');
+      // Cleanly inject CSS to hide social buttons rather than doing brittle HTML regex parsing
+      injections += '<style>.method-social, .divider { display: none !important; }</style>';
     }
+    
+    // Inject all scripts and styles right before </head>
+    html = html.replace('</head>', `${injections}</head>`);
     
     res.setHeader('Content-Type', 'text/html');
     res.send(html);
