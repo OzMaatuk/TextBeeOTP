@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { OtpService } from '../services/otpService';
 import { config } from '../utils/config';
 import { IOtpRepository } from '../repositories/otpRepository';
+import { IOtpProvider, OtpChannel } from '../providers/otpProvider';
 
 function isRateLimitedError(error: unknown): error is { code: string } {
   return typeof error === 'object' && error !== null && 'code' in error;
@@ -29,9 +30,10 @@ const verifySchema = z
 type RouterDeps = {
   otpService: OtpService;
   repo: IOtpRepository & { getHealthStatus?: () => unknown };
+  providers?: Map<OtpChannel, IOtpProvider>;
 };
 
-export function createOtpRouter({ otpService, repo }: RouterDeps): Router {
+export function createOtpRouter({ otpService, repo, providers }: RouterDeps): Router {
   const router = Router();
   const sendLimiter = rateLimit({
     windowMs: config.rateLimitWindowMs,
@@ -62,6 +64,10 @@ export function createOtpRouter({ otpService, repo }: RouterDeps): Router {
       if (isRateLimitedError(err) && err.code === 'RATE_LIMITED') {
         return res.status(429).json({ error: 'rate_limited' });
       }
+      // Invalid format errors (phone validation, etc.) should be 400, not 502
+      if (err instanceof Error && (err.message.includes('Invalid') || err.message.includes('invalid'))) {
+        return res.status(400).json({ error: 'invalid_input' });
+      }
       return res.status(502).json({ error: 'delivery_failed' });
     }
   });
@@ -82,6 +88,10 @@ export function createOtpRouter({ otpService, repo }: RouterDeps): Router {
       return res.status(200).json({ status: 'verified' });
     } catch (err: unknown) {
       req.log.error({ err, recipient }, 'Error verifying OTP');
+      // Invalid format errors should be 400
+      if (err instanceof Error && (err.message.includes('Invalid') || err.message.includes('invalid'))) {
+        return res.status(400).json({ error: 'invalid_input' });
+      }
       return res.status(500).json({ error: 'internal_error' });
     }
   });
@@ -91,8 +101,16 @@ export function createOtpRouter({ otpService, repo }: RouterDeps): Router {
       repo.getHealthStatus && typeof repo.getHealthStatus() === 'object'
         ? repo.getHealthStatus()
         : { repository: 'in-memory' };
+
+    const providersHealthy = {
+      sms: providers?.has('sms') ? 'configured' : 'not-configured',
+      email: providers?.has('email') ? 'configured' : 'not-configured',
+    };
+
     return res.json({
+      status: 'ok',
       repository: config.redisUrl ? 'redis' : 'in-memory',
+      providers: providersHealthy,
       ...(healthStatus as Record<string, unknown>),
     });
   });

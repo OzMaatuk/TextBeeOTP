@@ -17,13 +17,31 @@ export function createOtpService() {
     logger.warn('REDIS_URL not configured, using in-memory OTP repository');
   }
 
+  const smsAdapter = new TextBeeAdapter(config.textbeeApiKey, config.textbeeDeviceId, undefined, logger);
+  const emailAdapter = new EmailAdapter(undefined, config.emailFrom, logger);
+
+  // Validate providers at startup
+  if (config.isProduction) {
+    try {
+      smsAdapter.validateCredentials();
+    } catch (err) {
+      throw new Error(`SMS provider validation failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    try {
+      emailAdapter.validateCredentials();
+    } catch (err) {
+      throw new Error(`Email provider validation failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
   const providers = new Map<OtpChannel, IOtpProvider>();
-  providers.set('sms', new TextBeeAdapter(config.textbeeApiKey, config.textbeeDeviceId, undefined, logger));
-  providers.set('email', new EmailAdapter(undefined, config.emailFrom, logger));
+  providers.set('sms', smsAdapter);
+  providers.set('email', emailAdapter);
 
   return {
     logger,
     repo,
+    providers,
     otpService: new OtpService(repo, providers),
   };
 }

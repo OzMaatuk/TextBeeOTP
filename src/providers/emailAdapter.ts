@@ -29,6 +29,12 @@ export class EmailAdapter implements IOtpProvider {
     }
   }
 
+  validateCredentials(): void {
+    if (this.mode === 'mock') {
+      throw new Error('Email credentials missing: SMTP_USER and SMTP_PASS are required for email delivery');
+    }
+  }
+
   async sendOtp(recipient: string, message: string): Promise<void> {
     // Mock mode for development/testing when no provider configured
     if (this.mode === 'mock') {

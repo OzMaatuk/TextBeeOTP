@@ -15,6 +15,14 @@ export class TextBeeAdapter implements IOtpProvider {
     this.logger = logger;
   }
 
+  validateCredentials(): void {
+    if (!this.apiKey || !this.deviceId) {
+      throw new Error(
+        'TextBee credentials missing: TEXTBEE_API_KEY and TEXTBEE_DEVICE_ID are required for SMS delivery'
+      );
+    }
+  }
+
   async sendOtp(recipient: string, message: string): Promise<void> {
     if (!this.apiKey || !this.deviceId) {
       // In test/dev mode, just log

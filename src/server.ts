@@ -6,8 +6,14 @@ import { openApiSpec } from './openapi';
 import { createLogger } from './utils/logger';
 import { config } from './utils/config';
 import { createOtpService } from './bootstrap';
+import { IOtpRepository } from './repositories/otpRepository';
 
-export function createServer(): Express {
+export interface ServerInstance {
+  app: Express;
+  repo: IOtpRepository;
+}
+
+export function createServer(): ServerInstance {
   const app = express();
   app.set('trust proxy', 1);
   app.use(helmet());
@@ -21,13 +27,13 @@ export function createServer(): Express {
   }
 
   const logger = createLogger();
-  const { otpService, repo } = createOtpService();
+  const { otpService, repo, providers } = createOtpService();
   app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
     req.log = logger;
     next();
   });
 
-  app.use('/otp', createOtpRouter({ otpService, repo }));
+  app.use('/otp', createOtpRouter({ otpService, repo, providers }));
 
   app.get('/health', (_req: express.Request, res: express.Response) => {
     res.json({
@@ -42,5 +48,5 @@ export function createServer(): Express {
     res.status(500).json({ error: 'internal_error' });
   });
 
-  return app;
+  return { app, repo };
 }

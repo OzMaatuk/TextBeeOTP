@@ -87,7 +87,7 @@ describe('OtpService', () => {
   });
 
   it('throws an error for an unsupported channel', async () => {
-    const recipient = 'anybody';
+    const recipient = '+1234567890';
     const unsupportedChannel = 'whatsapp' as unknown as OtpChannel;
     await expect(svc.sendOTP(recipient, unsupportedChannel)).rejects.toThrow('Unsupported channel: whatsapp');
   });

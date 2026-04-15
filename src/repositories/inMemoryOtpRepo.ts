@@ -5,6 +5,28 @@ type InternalRecord = OtpRecord & { createdAt: number };
 export class InMemoryOtpRepository implements IOtpRepository {
   private store: Map<string, InternalRecord> = new Map();
   private attempts: Map<string, { count: number; expiresAt: number }> = new Map();
+  private cleanupInterval: NodeJS.Timeout;
+
+  constructor() {
+    // Clean up expired records every 5 minutes
+    this.cleanupInterval = setInterval(() => this.cleanup(), 5 * 60 * 1000);
+    // Allow the cleanup interval to not block process exit
+    this.cleanupInterval.unref();
+  }
+
+  private cleanup(): void {
+    const now = Date.now();
+    for (const [recipient, record] of this.store.entries()) {
+      if (now > record.expiresAt) {
+        this.store.delete(recipient);
+      }
+    }
+    for (const [recipient, attempt] of this.attempts.entries()) {
+      if (now > attempt.expiresAt) {
+        this.attempts.delete(recipient);
+      }
+    }
+  }
 
   async save(record: OtpRecord): Promise<void> {
     const createdAt = Date.now();
@@ -36,5 +58,17 @@ export class InMemoryOtpRepository implements IOtpRepository {
 
   async resetSendAttempts(recipient: string): Promise<void> {
     this.attempts.delete(recipient);
+  }
+
+  getHealthStatus(): { storage: 'in-memory'; records: number; attempts: number } {
+    return {
+      storage: 'in-memory',
+      records: this.store.size,
+      attempts: this.attempts.size,
+    };
+  }
+
+  destroy(): void {
+    clearInterval(this.cleanupInterval);
   }
 }
