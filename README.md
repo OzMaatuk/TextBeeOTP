@@ -31,9 +31,9 @@ Lightweight verification microservice supporting both SMS (via TextBee) and Emai
 
 No additional setup needed!
 
-### With Social Login (Google, GitHub, etc.)
+### With Social Login (Google, Facebook, etc.)
 
-To add "Continue with Google" / "Continue with GitHub" buttons to the login page, deploy [oauth2-proxy](https://oauth2-proxy.github.io/) alongside TextBeeOTP:
+To add "Continue with Google" / "Continue with Facebook" buttons to the login page, deploy [oauth2-proxy](https://oauth2-proxy.github.io/) alongside TextBeeOTP:
 
 1. Set up oauth2-proxy pointing to TextBeeOTP's OIDC provider:
    ```bash
@@ -226,7 +226,7 @@ curl -X POST http://localhost:3008/otp/verify \
 
 ## Alternative: OIDC Authentication
 
-In addition to the OTP-based login UI above, TextBeeOTP also provides OIDC provider endpoints for integrating with external identity providers (Google, Facebook, GitHub, etc.) via [oauth2-proxy](https://oauth2-proxy.github.io/).
+In addition to the OTP-based login UI above, TextBeeOTP also provides OIDC provider endpoints for integrating with external identity providers (Google, Facebook, etc.) via [oauth2-proxy](https://oauth2-proxy.github.io/).
 
 For details, see [OIDC_INTEGRATION.md](OIDC_INTEGRATION.md)
 

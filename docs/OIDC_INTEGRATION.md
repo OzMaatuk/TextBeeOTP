@@ -2,7 +2,7 @@
 
 TextBeeOTP supports two **independent** authentication methods. Choose one based on your use case:
 
-- **Method 1: OIDC + External Providers** — Use Google, Facebook, GitHub, etc. for SSO
+- **Method 1: OIDC + External Providers** — Use Google, Facebook, etc. for SSO
 - **Method 2: OTP Verification** — Email/phone code verification via REST API
 
 Both can be enabled simultaneously and users/apps can choose which to use.
@@ -13,7 +13,7 @@ Both can be enabled simultaneously and users/apps can choose which to use.
 
 ### Overview
 
-The OIDC provider acts as an identity provider bridge. It works with **oauth2-proxy** to delegate authentication to external providers (Google, Facebook, GitHub, etc.). TextBeeOTP doesn't handle the login UI — oauth2-proxy and the external provider do.
+The OIDC provider acts as an identity provider bridge. It works with **oauth2-proxy** to delegate authentication to external providers (Google, Facebook, etc.). TextBeeOTP doesn't handle the login UI — oauth2-proxy and the external provider do.
 
 ### Architecture
 
@@ -268,7 +268,7 @@ document.getElementById('verifyForm').addEventListener('submit', async (e) => {
 ## Choosing Between Methods
 
 ### Use **OIDC + External Providers** if:
-- You want SSO with Google, Facebook, GitHub, etc.
+- You want SSO with Google, Facebook, etc.
 - You don't want to manage user accounts
 - You need enterprise authentication (SAML, Okta, etc.)
 - Users are already using these platforms
