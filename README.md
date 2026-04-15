@@ -13,6 +13,8 @@ Lightweight verification microservice supporting both SMS (via TextBee) and Emai
 
 ## Quick Start (Browser UI)
 
+### OTP Only (Standalone)
+
 1. Start the server:
    ```bash
    npm install
@@ -24,10 +26,37 @@ Lightweight verification microservice supporting both SMS (via TextBee) and Emai
    http://localhost:3008/login
    ```
 
-3. Enter your email or phone number and receive a 6-digit code
-4. Enter the code to verify
+3. Choose "Email or Phone" and enter your recipient
+4. Enter the 6-digit code you receive
 
-No backend integration needed — just point users to `/login`!
+No additional setup needed!
+
+### With Social Login (Google, GitHub, etc.)
+
+To add "Continue with Google" / "Continue with GitHub" buttons to the login page, deploy [oauth2-proxy](https://oauth2-proxy.github.io/) alongside TextBeeOTP:
+
+1. Set up oauth2-proxy pointing to TextBeeOTP's OIDC provider:
+   ```bash
+   oauth2-proxy \
+     --provider=oidc \
+     --oidc-issuer-url=http://localhost:3008 \
+     --client-id=oauth2-proxy \
+     --client-secret=your-secret \
+     --redirect-url=http://localhost:4180/oauth2/callback \
+     --upstreams=http://localhost:3008 \
+     --http-address=0.0.0.0:4180
+   ```
+
+2. Enable OIDC in TextBeeOTP (set `ENABLE_OIDC=true` in `.env`)
+
+3. Open in your browser:
+   ```
+   http://localhost:3008/login
+   ```
+
+4. You'll now see both options: direct OTP verification and social login buttons
+
+For complete oauth2-proxy setup instructions, see [OIDC_INTEGRATION.md](OIDC_INTEGRATION.md)
 
 ## API Endpoints
 

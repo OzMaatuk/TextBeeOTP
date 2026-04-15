@@ -4,6 +4,14 @@ import { createLogger } from '../utils/logger.js';
 
 const logger = createLogger();
 
+// Polyfill for URL.parse - added in Node.js 19.4+
+// This allows oidc-provider to work with Node.js 18.x
+if (!URL.parse) {
+  (URL as any).parse = function (url: string) {
+    return new URL(url);
+  };
+}
+
 // In-memory account storage for external identities
 interface ExternalAccount {
   accountId: string;
@@ -50,7 +58,6 @@ export async function createOidcProvider(app: Express): Promise<any> {
     features: {
       devInteractions: { enabled: false },
       rpInitiatedLogout: { enabled: true },
-      sessionManagement: { enabled: false },
     },
     ttl: {
       AccessToken: 3600, // 1 hour

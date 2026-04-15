@@ -183,6 +183,121 @@
       color: #999;
       margin-top: 4px;
     }
+
+    .method-selector {
+      text-align: center;
+    }
+
+    .method-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 24px;
+    }
+
+    .methods {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .method-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: white;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-family: inherit;
+      justify-content: flex-start;
+      text-align: left;
+    }
+
+    .method-btn:hover {
+      border-color: #667eea;
+      background-color: rgba(102, 126, 234, 0.05);
+    }
+
+    .method-btn:active {
+      transform: scale(0.98);
+    }
+
+    .method-btn .method-icon {
+      font-size: 20px;
+      min-width: 20px;
+    }
+
+    .method-btn .method-name {
+      font-weight: 500;
+      color: #333;
+      font-size: 14px;
+    }
+
+    .method-btn .method-desc {
+      font-size: 12px;
+      color: #999;
+      display: block;
+    }
+
+    .method-otp {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+      border-color: #667eea;
+    }
+
+    .method-otp:hover {
+      border-color: #667eea;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    }
+
+    .method-social {
+      border-color: #ddd;
+      flex-direction: row;
+    }
+
+    .method-social .method-desc {
+      display: none;
+    }
+
+    .divider {
+      color: #ccc;
+      font-size: 12px;
+      font-weight: 500;
+      margin: 8px 0;
+      text-transform: uppercase;
+    }
+
+    .form-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 24px;
+      gap: 12px;
+    }
+
+    .back-btn {
+      background: none;
+      border: none;
+      color: #667eea;
+      cursor: pointer;
+      padding: 0;
+      font-size: 16px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .back-btn:hover {
+      text-decoration: underline;
+    }
+
+    .form-title {
+      flex: 1;
+      font-weight: 600;
+      color: #333;
+    }
   </style>
 </head>
 <body>
@@ -192,7 +307,40 @@
       <div class="subtitle">One-Time Password Authentication</div>
     </div>
 
-    <form id="loginForm">
+    <div id="methodSelector" class="method-selector">
+      <div class="method-title">Choose Your Authentication Method</div>
+      
+      <div class="methods">
+        <button type="button" class="method-btn method-otp" onclick="showOtpForm()">
+          <span class="method-icon">📧</span>
+          <span class="method-name">Email or Phone</span>
+          <span class="method-desc">Verify with an OTP code</span>
+        </button>
+        
+        <div class="divider">OR</div>
+        
+        <button type="button" class="method-btn method-social google" onclick="loginWithProvider('google')">
+          <span class="method-icon">🔴</span>
+          <span class="method-name">Continue with Google</span>
+        </button>
+        
+        <button type="button" class="method-btn method-social github" onclick="loginWithProvider('github')">
+          <span class="method-icon">⚫</span>
+          <span class="method-name">Continue with GitHub</span>
+        </button>
+        
+        <button type="button" class="method-btn method-social linkedin" onclick="loginWithProvider('linkedin')">
+          <span class="method-icon">🔵</span>
+          <span class="method-name">Continue with LinkedIn</span>
+        </button>
+      </div>
+    </div>
+
+    <form id="loginForm" style="display: none;">
+      <div class="form-header">
+        <button type="button" class="back-btn" onclick="showMethodSelector()">← Back</button>
+        <span class="form-title">Email or Phone Verification</span>
+      </div>
       <div class="error-message" id="errorMessage"></div>
 
       <div class="form-group">
@@ -233,6 +381,40 @@
   </div>
 
   <script>
+    // OAuth2-proxy configuration
+    // Update this to match your oauth2-proxy deployment
+    const OAUTH2_PROXY_URL = (function() {
+      // Detect oauth2-proxy URL - adjust based on your setup
+      const protocol = window.location.protocol;
+      const hostname = window.location.hostname;
+      const isDev = hostname === 'localhost' || hostname === '127.0.0.1';
+      return isDev ? 'http://localhost:4180' : `${protocol}//${hostname}`;
+    })();
+
+    // Method selection functions
+    function showOtpForm() {
+      document.getElementById('methodSelector').style.display = 'none';
+      document.getElementById('loginForm').style.display = 'block';
+      document.getElementById('recipient').focus();
+    }
+
+    function showMethodSelector() {
+      document.getElementById('loginForm').style.display = 'none';
+      document.getElementById('methodSelector').style.display = 'block';
+    }
+
+    function loginWithProvider(provider) {
+      // Redirect to oauth2-proxy to start authentication with the specified provider
+      // oauth2-proxy will handle the OAuth2 flow with the provider and redirect back
+      const currentUrl = window.location.href.split('?')[0]; // Remove any query params
+      const redirectUrl = encodeURIComponent(currentUrl);
+      
+      // oauth2-proxy start endpoint format: /oauth2/start?rd=REDIRECT_URL&provider=PROVIDER
+      const oauth2StartUrl = `${OAUTH2_PROXY_URL}/oauth2/start?rd=${redirectUrl}&provider=${provider}`;
+      
+      window.location.href = oauth2StartUrl;
+    }
+
     const form = document.getElementById('loginForm');
     const emailChannel = document.getElementById('emailChannel');
     const smsChannel = document.getElementById('smsChannel');
