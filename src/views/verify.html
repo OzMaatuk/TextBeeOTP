@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TextBeeOTP - Verify Code</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      width: 100%;
+      max-width: 420px;
+      padding: 40px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .logo {
+      font-size: 28px;
+      font-weight: bold;
+      color: #667eea;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    .recipient-display {
+      color: #333;
+      font-weight: 600;
+      font-size: 16px;
+      word-break: break-all;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #333;
+      font-size: 14px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 18px;
+      letter-spacing: 4px;
+      text-align: center;
+      transition: border-color 0.3s;
+      font-family: 'Courier New', monospace;
+      font-weight: 600;
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    input[type="text"]::placeholder {
+      letter-spacing: 2px;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .error-message {
+      display: none;
+      background-color: #fee;
+      color: #c33;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      border-left: 4px solid #c33;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    .success-message {
+      display: none;
+      background-color: #efe;
+      color: #3c3;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      border-left: 4px solid #3c3;
+    }
+
+    .success-message.show {
+      display: block;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      color: #666;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #ddd;
+      border-top-color: #667eea;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .helper-text {
+      font-size: 12px;
+      color: #999;
+      margin-top: 4px;
+    }
+
+    .timer {
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+      margin-top: 16px;
+    }
+
+    .timer.expired {
+      color: #c33;
+      font-weight: 600;
+    }
+
+    .back-link {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .back-link a {
+      color: #667eea;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .back-link a:hover {
+      text-decoration: underline;
+    }
+
+    .verification-success {
+      display: none;
+      text-align: center;
+    }
+
+    .success-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+
+    .success-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .success-message-text {
+      color: #666;
+      margin-bottom: 24px;
+    }
+
+    .success-token {
+      background: #f5f5f5;
+      padding: 16px;
+      border-radius: 8px;
+      word-break: break-all;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: #333;
+      margin-bottom: 20px;
+      max-height: 100px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">TextBeeOTP</div>
+      <div class="subtitle">Verify Your Code</div>
+      <div class="recipient-display" id="recipientDisplay"></div>
+    </div>
+
+    <div id="verificationForm">
+      <div class="error-message" id="errorMessage"></div>
+      <div class="success-message" id="successMessage"></div>
+
+      <form id="verifyForm">
+        <div class="form-group">
+          <label for="code">Enter 6-Digit Code</label>
+          <input
+            type="text"
+            id="code"
+            name="code"
+            placeholder="000000"
+            maxlength="6"
+            inputmode="numeric"
+            required
+            autofocus
+          >
+          <div class="helper-text">Check your email or SMS for the code</div>
+        </div>
+
+        <button type="submit" id="submitBtn">
+          Verify Code
+        </button>
+
+        <div class="loading" id="loading">
+          <div class="spinner"></div>
+          Verifying code...
+        </div>
+      </form>
+
+      <div class="timer" id="timer">Code expires in: <span id="timeLeft">10:00</span></div>
+
+      <div class="back-link">
+        <a href="/login">← Start Over</a>
+      </div>
+    </div>
+
+    <div class="verification-success" id="verificationSuccess">
+      <div class="success-icon">✓</div>
+      <div class="success-title">Verification Successful!</div>
+      <div class="success-message-text">Your identity has been verified.</div>
+      <div class="success-token" id="tokenDisplay"></div>
+      <button onclick="window.location.href='/login'">Sign In Again</button>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('verifyForm');
+    const codeInput = document.getElementById('code');
+    const errorMessage = document.getElementById('errorMessage');
+    const successMessage = document.getElementById('successMessage');
+    const submitBtn = document.getElementById('submitBtn');
+    const loading = document.getElementById('loading');
+    const timer = document.getElementById('timer');
+    const timeLeft = document.getElementById('timeLeft');
+    const recipientDisplay = document.getElementById('recipientDisplay');
+    const verificationForm = document.getElementById('verificationForm');
+    const verificationSuccess = document.getElementById('verificationSuccess');
+    const tokenDisplay = document.getElementById('tokenDisplay');
+
+    // Retrieve recipient and channel from sessionStorage
+    const recipient = sessionStorage.getItem('otpRecipient');
+    const channel = sessionStorage.getItem('otpChannel');
+
+    if (!recipient) {
+      window.location.href = '/login';
+    } else {
+      // Mask the recipient for display
+      const masked = maskRecipient(recipient);
+      recipientDisplay.textContent = `Code sent to: ${masked}`;
+    }
+
+    function maskRecipient(str) {
+      if (str.includes('@')) {
+        // Email
+        const [local, domain] = str.split('@');
+        const visibleChars = Math.max(1, Math.floor(local.length / 3));
+        const masked = local.substring(0, visibleChars) + '*'.repeat(local.length - visibleChars);
+        return `${masked}@${domain}`;
+      } else {
+        // Phone
+        const digits = str.replace(/\D/g, '');
+        const last4 = digits.slice(-4);
+        return `+***${last4}`;
+      }
+    }
+
+    // Timer functionality
+    let secondsLeft = 600; // 10 minutes
+    const timerInterval = setInterval(() => {
+      secondsLeft--;
+      const minutes = Math.floor(secondsLeft / 60);
+      const secs = secondsLeft % 60;
+      timeLeft.textContent = `${minutes}:${secs.toString().padStart(2, '0')}`;
+
+      if (secondsLeft <= 0) {
+        clearInterval(timerInterval);
+        timer.classList.add('expired');
+        timeLeft.textContent = 'Code expired';
+        codeInput.disabled = true;
+        submitBtn.disabled = true;
+      }
+    }, 1000);
+
+    // Auto-format input (only numbers, max 6 digits)
+    codeInput.addEventListener('input', (e) => {
+      e.target.value = e.target.value.replace(/\D/g, '').substring(0, 6);
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const code = codeInput.value.trim();
+
+      if (code.length !== 6) {
+        showError('Please enter a 6-digit code');
+        return;
+      }
+
+      submitBtn.style.display = 'none';
+      form.style.opacity = '0.6';
+      loading.style.display = 'block';
+      errorMessage.classList.remove('show');
+
+      try {
+        const response = await fetch('/otp/verify', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ recipient, code }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          const errorMsg = data.error === 'invalid_code' ? 'Invalid code. Check and try again.' : (data.error || 'Verification failed');
+          showError(errorMsg);
+          submitBtn.style.display = 'block';
+          form.style.opacity = '1';
+          loading.style.display = 'none';
+          return;
+        }
+
+        // Success!
+        clearInterval(timerInterval);
+        verificationForm.style.display = 'none';
+        verificationSuccess.style.display = 'block';
+        
+        // Display token if provided
+        if (data.token) {
+          tokenDisplay.textContent = `Token: ${data.token}`;
+        } else {
+          tokenDisplay.textContent = 'Verification complete. You can now proceed.';
+        }
+
+        // Clear session storage
+        sessionStorage.removeItem('otpRecipient');
+        sessionStorage.removeItem('otpChannel');
+      } catch (err) {
+        showError('Network error. Please try again.');
+        submitBtn.style.display = 'block';
+        form.style.opacity = '1';
+        loading.style.display = 'none';
+      }
+    });
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.classList.add('show');
+    }
+  </script>
+</body>
+</html>

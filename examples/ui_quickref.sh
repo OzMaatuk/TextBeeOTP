@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# TextBeeOTP Login UI - Quick Reference
+# This shows how to test the login UI immediately
+
+echo "📝 TextBeeOTP Login UI - Quick Reference"
+echo "========================================"
+echo ""
+echo "✅ UI is ready to use!"
+echo ""
+echo "🌐 Open in your browser:"
+echo "   http://localhost:3008/login"
+echo ""
+echo "📋 Available pages:"
+echo "   /login   → Enter email or phone number"
+echo "   /verify  → Enter 6-digit code (auto-populated after login)"
+echo ""
+echo "⚙️  Server endpoints (for API integration):"
+echo "   POST /otp/send   → Send OTP code"
+echo "   POST /otp/verify → Verify OTP code"
+echo ""
+echo "📊 Full documentation:"
+echo "   UI_IMPLEMENTATION.md    → Implementation details"
+echo "   OIDC_INTEGRATION.md     → Alternative: OIDC/oauth2-proxy setup"
+echo "   README.md               → General setup & deployment"
+echo ""
+echo "🚀 Start the server:"
+echo "   npm start"
+echo ""
+echo "🧪 Run tests:"
+echo "   npm test"
+echo ""
+echo "========================================"

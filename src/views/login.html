@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TextBeeOTP - Login</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      width: 100%;
+      max-width: 420px;
+      padding: 40px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .logo {
+      font-size: 28px;
+      font-weight: bold;
+      color: #667eea;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: #666;
+      font-size: 14px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #333;
+      font-size: 14px;
+    }
+
+    input[type="email"],
+    input[type="tel"],
+    select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+      font-family: inherit;
+    }
+
+    input[type="email"]:focus,
+    input[type="tel"]:focus,
+    select:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .channel-selector {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .channel-option {
+      flex: 1;
+    }
+
+    .channel-option input[type="radio"] {
+      display: none;
+    }
+
+    .channel-option label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-bottom: 0;
+      font-weight: 500;
+      color: #666;
+    }
+
+    .channel-option input[type="radio"]:checked + label {
+      border-color: #667eea;
+      background-color: rgba(102, 126, 234, 0.1);
+      color: #667eea;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .error-message {
+      display: none;
+      background-color: #fee;
+      color: #c33;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      border-left: 4px solid #c33;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      color: #666;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #ddd;
+      border-top-color: #667eea;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .helper-text {
+      font-size: 12px;
+      color: #999;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">TextBeeOTP</div>
+      <div class="subtitle">One-Time Password Authentication</div>
+    </div>
+
+    <form id="loginForm">
+      <div class="error-message" id="errorMessage"></div>
+
+      <div class="form-group">
+        <label>How would you like to receive your code?</label>
+        <div class="channel-selector">
+          <div class="channel-option">
+            <input type="radio" id="emailChannel" name="channel" value="email" checked>
+            <label for="emailChannel">📧 Email</label>
+          </div>
+          <div class="channel-option">
+            <input type="radio" id="smsChannel" name="channel" value="sms">
+            <label for="smsChannel">📱 SMS</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="recipient" id="recipientLabel">Email Address</label>
+        <input
+          type="email"
+          id="recipient"
+          name="recipient"
+          placeholder="your@email.com"
+          required
+        >
+        <div class="helper-text" id="helperText">We'll send a 6-digit code to this email</div>
+      </div>
+
+      <button type="submit" id="submitBtn">
+        Send Code
+      </button>
+
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        Sending code...
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const emailChannel = document.getElementById('emailChannel');
+    const smsChannel = document.getElementById('smsChannel');
+    const recipientInput = document.getElementById('recipient');
+    const recipientLabel = document.getElementById('recipientLabel');
+    const helperText = document.getElementById('helperText');
+    const errorMessage = document.getElementById('errorMessage');
+    const submitBtn = document.getElementById('submitBtn');
+    const loading = document.getElementById('loading');
+
+    // Update labels when channel changes
+    emailChannel.addEventListener('change', () => {
+      recipientLabel.textContent = 'Email Address';
+      recipientInput.type = 'email';
+      recipientInput.placeholder = 'your@email.com';
+      helperText.textContent = "We'll send a 6-digit code to this email";
+      recipientInput.value = '';
+    });
+
+    smsChannel.addEventListener('change', () => {
+      recipientLabel.textContent = 'Phone Number';
+      recipientInput.type = 'tel';
+      recipientInput.placeholder = '+1 (555) 123-4567';
+      helperText.textContent = "We'll send a 6-digit code to this phone number";
+      recipientInput.value = '';
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const channel = document.querySelector('input[name="channel"]:checked').value;
+      const recipient = recipientInput.value.trim();
+
+      if (!recipient) {
+        showError('Please enter your email or phone number');
+        return;
+      }
+
+      // Basic validation
+      if (channel === 'email' && !recipient.includes('@')) {
+        showError('Please enter a valid email address');
+        return;
+      }
+
+      if (channel === 'sms' && !recipient.replace(/\D/g, '').match(/\d{10,}/)) {
+        showError('Please enter a valid phone number');
+        return;
+      }
+
+      submitBtn.style.display = 'none';
+      form.style.opacity = '0.6';
+      loading.style.display = 'block';
+      errorMessage.classList.remove('show');
+
+      try {
+        const response = await fetch('/otp/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ recipient, channel }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          showError(data.error || 'Failed to send code');
+          submitBtn.style.display = 'block';
+          form.style.opacity = '1';
+          loading.style.display = 'none';
+          return;
+        }
+
+        // Success - redirect to verification page
+        // Store recipient and channel in sessionStorage for the verify page
+        sessionStorage.setItem('otpRecipient', recipient);
+        sessionStorage.setItem('otpChannel', channel);
+        
+        // Redirect to verify page
+        window.location.href = '/verify';
+      } catch (err) {
+        showError('Network error. Please try again.');
+        submitBtn.style.display = 'block';
+        form.style.opacity = '1';
+        loading.style.display = 'none';
+      }
+    });
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.classList.add('show');
+    }
+  </script>
+</body>
+</html>

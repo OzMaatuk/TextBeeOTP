@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
-dotenv.config();
+import path from 'path';
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 // Validate env and expose normalized config
 import { config } from './utils/config';
 

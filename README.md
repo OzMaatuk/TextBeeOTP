@@ -4,14 +4,38 @@ Lightweight verification microservice supporting both SMS (via TextBee) and Emai
 
 ## Features
 
+- **Browser-based Login UI**: Ready-to-use HTML forms for OTP authentication
 - **Multi-channel OTP**: SMS and Email support
 - **REST API**: Clean endpoints for sending and verifying OTPs
 - **Rate limiting**: Built-in protection against abuse
 - **Flexible storage**: Redis or in-memory storage options
 - **Production hardened**: OTP hashing, layered rate limits, Docker support, comprehensive testing
 
+## Quick Start (Browser UI)
+
+1. Start the server:
+   ```bash
+   npm install
+   npm start
+   ```
+
+2. Open in your browser:
+   ```
+   http://localhost:3008/login
+   ```
+
+3. Enter your email or phone number and receive a 6-digit code
+4. Enter the code to verify
+
+No backend integration needed — just point users to `/login`!
+
 ## API Endpoints
 
+### UI Routes
+- `GET /login` - Login form (select email/SMS, enter recipient)
+- `GET /verify` - Verification form (enter 6-digit code)
+
+### OTP API
 - `POST /otp/send` - Send OTP via SMS or Email
 - `POST /otp/verify` - Verify OTP code
 
@@ -53,7 +77,7 @@ SMTP_USER=your_zoho_address@yourdomain.com
 SMTP_PASS=your_zoho_app_password
 
 # Server Configuration
-PORT=3000
+PORT=3008
 NODE_ENV=development
 ```
 
@@ -126,33 +150,57 @@ docker run -p 3000:3000 --env-file .env otp-service
 
 ## API Usage Examples
 
-### Send OTP via SMS
+### Using the Browser UI
+
+Simply navigate to your running server:
+
+```
+http://localhost:3008/login
+```
+
+Fill out the form, receive a code, and verify it — no code needed!
+
+### Using the REST API
+
+If you prefer to call the API directly from your own application:
+
+#### Send OTP via SMS
 
 ```bash
-curl -X POST http://localhost:3000/otp/send \
+curl -X POST http://localhost:3008/otp/send \
   -H "Content-Type: application/json" \
   -d '{"recipient": "+1234567890", "channel": "sms"}'
 ```
 
-### Send OTP via Email
+#### Send OTP via Email
 
 ```bash
-curl -X POST http://localhost:3000/otp/send \
+curl -X POST http://localhost:3008/otp/send \
   -H "Content-Type: application/json" \
   -d '{"recipient": "user@example.com", "channel": "email"}'
 ```
 
-### Verify OTP
+#### Verify OTP
 
 ```bash
-curl -X POST http://localhost:3000/otp/verify \
+curl -X POST http://localhost:3008/otp/verify \
   -H "Content-Type: application/json" \
   -d '{"recipient": "user@example.com", "code": "123456"}'
 ```
 
-### Use example script
+### Using helper script
 
 ```bash
 ./examples/otp_demo.sh send-email user@example.com
 ./examples/otp_demo.sh verify user@example.com 123456
 ```
+
+## Alternative: OIDC Authentication
+
+In addition to the OTP-based login UI above, TextBeeOTP also provides OIDC provider endpoints for integrating with external identity providers (Google, Facebook, GitHub, etc.) via [oauth2-proxy](https://oauth2-proxy.github.io/).
+
+For details, see [OIDC_INTEGRATION.md](OIDC_INTEGRATION.md)
+
+**Summary**: Choose one:
+- **OTP UI** (`/login`) — Email/phone code verification, works standalone
+- **OIDC** — SSO with external providers like Google, requires oauth2-proxy

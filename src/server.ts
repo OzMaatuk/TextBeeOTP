@@ -2,6 +2,7 @@ import express, { Express } from 'express';
 import helmet from 'helmet';
 import swaggerUi from 'swagger-ui-express';
 import { createOtpRouter } from './routes/otp';
+import { createUiRouter } from './routes/ui';
 import { openApiSpec } from './openapi';
 import { createLogger } from './utils/logger';
 import { config } from './utils/config';
@@ -36,6 +37,9 @@ export function createServer(): ServerInstance {
 
   // OTP endpoints - standalone authentication via /otp/send and /otp/verify
   app.use('/otp', createOtpRouter({ otpService, repo, providers }));
+
+  // UI routes for OTP login and verification
+  app.use('/', createUiRouter());
 
   // Setup OIDC provider (only if enabled and not in test mode)
   // OIDC is for external authentication (Google, Facebook, etc.) via oauth2-proxy
