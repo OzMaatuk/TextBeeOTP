@@ -18,6 +18,14 @@ class MockProvider implements IOtpProvider {
   }
 }
 
+function extractCode(message?: string): string {
+  const match = message?.match(/(\d{4,10})/);
+  if (!match) {
+    throw new Error('OTP code not found in provider message');
+  }
+  return match[1];
+}
+
 describe('OtpService', () => {
   let repo: InMemoryOtpRepository;
   let smsProvider: MockProvider;
@@ -51,17 +59,15 @@ describe('OtpService', () => {
     // Check if the record was saved
     const record = await repo.get(recipient);
     expect(record).not.toBeNull();
-    expect(record?.code).toHaveLength(6);
+    expect(record?.code).toHaveLength(64);
 
     // Verify wrong code fails
     let ok = await svc.verifyOTP(recipient, '000000');
     expect(ok).toBe(false);
 
     // Verify correct code succeeds
-    if (record) {
-      ok = await svc.verifyOTP(recipient, record.code);
-      expect(ok).toBe(true);
-    }
+    ok = await svc.verifyOTP(recipient, extractCode(smsProvider.last.message));
+    expect(ok).toBe(true);
   });
 
   it('sends OTP via email and verifies correctly', async () => {
@@ -76,19 +82,14 @@ describe('OtpService', () => {
     const record = await repo.get(recipient);
     expect(record).not.toBeNull();
 
-    if (record) {
-      const ok = await svc.verifyOTP(recipient, record.code);
-      expect(ok).toBe(true);
-    }
+    const ok = await svc.verifyOTP(recipient, extractCode(emailProvider.last.message));
+    expect(ok).toBe(true);
   });
 
   it('throws an error for an unsupported channel', async () => {
     const recipient = 'anybody';
-    // Cast to `any` to bypass TypeScript's enum check for testing purposes
-    const unsupportedChannel = 'whatsapp' as any;
-    await expect(svc.sendOTP(recipient, unsupportedChannel)).rejects.toThrow(
-      'Unsupported channel: whatsapp'
-    );
+    const unsupportedChannel = 'whatsapp' as unknown as OtpChannel;
+    await expect(svc.sendOTP(recipient, unsupportedChannel)).rejects.toThrow('Unsupported channel: whatsapp');
   });
 
   it('deletes the record after successful verification', async () => {
@@ -98,10 +99,8 @@ describe('OtpService', () => {
     const record = await repo.get(recipient);
     expect(record).not.toBeNull();
 
-    if (record) {
-      const ok = await svc.verifyOTP(recipient, record.code);
-      expect(ok).toBe(true);
-    }
+    const ok = await svc.verifyOTP(recipient, extractCode(smsProvider.last.message));
+    expect(ok).toBe(true);
 
     // After verification, the record should be gone
     const recordAfterVerify = await repo.get(recipient);

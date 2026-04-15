@@ -8,7 +8,7 @@ Lightweight verification microservice supporting both SMS (via TextBee) and Emai
 - **REST API**: Clean endpoints for sending and verifying OTPs
 - **Rate limiting**: Built-in protection against abuse
 - **Flexible storage**: Redis or in-memory storage options
-- **Production ready**: Docker support, comprehensive testing
+- **Production hardened**: OTP hashing, layered rate limits, Docker support, comprehensive testing
 
 ## API Endpoints
 
@@ -23,10 +23,15 @@ Create a `.env` file with the following variables:
 # OTP Settings
 OTP_TTL_SECONDS=300
 OTP_LENGTH=6
+OTP_SECRET=replace-with-a-long-random-secret
 
 # Rate Limiting
 RATE_LIMIT_WINDOW_MS=60000
 RATE_LIMIT_MAX=5
+VERIFY_RATE_LIMIT_MAX=10
+
+# Request Limits
+JSON_BODY_LIMIT=8kb
 
 # Redis (optional - falls back to in-memory if not set)
 # For Redis Cloud (redis.io): use rediss:// protocol for TLS
@@ -68,7 +73,7 @@ NODE_ENV=development
 
 ### 3. Redis Setup (Optional)
 
-Redis is optional - the service falls back to in-memory storage if not configured.
+Redis is optional in development. For production, Redis-backed storage is strongly recommended because in-memory OTPs do not survive restarts or horizontal scaling.
 
 #### Redis Cloud (redis.io)
 
@@ -104,6 +109,13 @@ REDIS_URL=redis://localhost:6379
 ```bash
 npm test
 ```
+
+## Production Notes
+
+- Set a strong `OTP_SECRET`. In production the service will refuse to start without it.
+- OTP values are stored as HMAC hashes, not plaintext.
+- `/api-docs` is disabled in production.
+- The Redis debug test endpoint has been removed from the production API surface.
 
 ## Docker
 

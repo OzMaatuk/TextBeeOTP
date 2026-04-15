@@ -1,31 +1,59 @@
 import request from 'supertest';
 import express from 'express';
 import { OtpService } from '../src/services/otpService';
-import { TextBeeAdapter } from '../src/providers/textbeeAdapter';
 import { RedisOtpRepository } from '../src/repositories/redisOtpRepo';
 import Redis from 'ioredis';
 import RedisMock from 'ioredis-mock';
 import { Router } from 'express';
 import { z } from 'zod';
 import { IOtpProvider, OtpChannel } from '../src/providers/otpProvider';
-import { EmailAdapter } from '../src/providers/emailAdapter';
+import { normalizeRecipient } from '../src/utils/recipient';
 
-// Updated Zod schemas for the new API
-const sendSchema = z.object({
-  recipient: z.string().min(5).max(50),
-  channel: z.enum(['sms', 'email']),
-});
+function isRateLimitedError(error: unknown): error is { code: string } {
+  return typeof error === 'object' && error !== null && 'code' in error;
+}
 
-const verifySchema = z.object({
-  recipient: z.string().min(5).max(50),
-  code: z.string().min(4).max(10),
-});
+const sendSchema = z
+  .object({
+    recipient: z.string().trim().min(5).max(320),
+    channel: z.enum(['sms', 'email']),
+  })
+  .strict();
+
+const verifySchema = z
+  .object({
+    recipient: z.string().trim().min(5).max(320),
+    code: z
+      .string()
+      .trim()
+      .regex(/^\d{4,10}$/),
+  })
+  .strict();
+
+class MockProvider implements IOtpProvider {
+  public lastMessageByRecipient = new Map<string, string>();
+
+  async sendOtp(recipient: string, message: string): Promise<void> {
+    this.lastMessageByRecipient.set(recipient, message);
+  }
+
+  getCode(recipient: string): string {
+    const message = this.lastMessageByRecipient.get(recipient);
+    const match = message?.match(/(\d{4,10})/);
+    if (!match) {
+      throw new Error(`OTP code not found for ${recipient}`);
+    }
+    return match[1];
+  }
+}
 
 // A factory to create the app with all dependencies for testing
 function makeTestApp(repo: RedisOtpRepository) {
   const providers = new Map<OtpChannel, IOtpProvider>();
-  providers.set('sms', new TextBeeAdapter('', '')); // Mocked, won't actually send
-  providers.set('email', new EmailAdapter());
+  const smsProvider = new MockProvider();
+  const emailProvider = new MockProvider();
+  providers.set('sms', smsProvider);
+  providers.set('email', emailProvider);
 
   const otpService = new OtpService(repo, providers);
   const router = Router();
@@ -36,8 +64,10 @@ function makeTestApp(repo: RedisOtpRepository) {
     try {
       await otpService.sendOTP(parse.data.recipient, parse.data.channel);
       return res.status(200).json({ status: 'sent' });
-    } catch (err: any) {
-      if (err?.code === 'RATE_LIMITED') return res.status(429).json({ error: 'rate_limited' });
+    } catch (err: unknown) {
+      if (isRateLimitedError(err) && err.code === 'RATE_LIMITED') {
+        return res.status(429).json({ error: 'rate_limited' });
+      }
       return res.status(500).json({ error: 'internal_error' });
     }
   });
@@ -49,7 +79,7 @@ function makeTestApp(repo: RedisOtpRepository) {
       const ok = await otpService.verifyOTP(parse.data.recipient, parse.data.code);
       if (!ok) return res.status(400).json({ error: 'invalid_code' });
       return res.status(200).json({ status: 'verified' });
-    } catch (err: any) {
+    } catch (_err: unknown) {
       return res.status(500).json({ error: 'internal_error' });
     }
   });
@@ -57,19 +87,21 @@ function makeTestApp(repo: RedisOtpRepository) {
   const app = express();
   app.use(express.json());
   app.use('/otp', router);
-  return app;
+  return { app, smsProvider, emailProvider };
 }
 
 describe('OTP API Integration (Redis)', () => {
   let app: express.Express;
   let repo: RedisOtpRepository;
   let redisMock: Redis;
+  let smsProvider: MockProvider;
+  let emailProvider: MockProvider;
 
   beforeEach(() => {
     jest.setTimeout(10000); // Increase timeout for integration tests
     redisMock = new RedisMock();
     repo = new RedisOtpRepository(redisMock);
-    app = makeTestApp(repo);
+    ({ app, smsProvider, emailProvider } = makeTestApp(repo));
 
     process.env.RATE_LIMIT_WINDOW_MS = '1000'; // 1s window
     process.env.RATE_LIMIT_MAX = '3';
@@ -84,11 +116,13 @@ describe('OTP API Integration (Redis)', () => {
     const recipient = '+15005550006';
     await request(app).post('/otp/send').send({ recipient, channel: 'sms' }).expect(200);
 
-    const record = await repo.get(recipient);
+    const normalizedRecipient = normalizeRecipient(recipient, 'sms');
+    const record = await repo.get(normalizedRecipient);
     expect(record).not.toBeNull();
-    if (!record) return;
 
-    const res = await request(app).post('/otp/verify').send({ recipient, code: record.code });
+    const res = await request(app)
+      .post('/otp/verify')
+      .send({ recipient, code: smsProvider.getCode(normalizedRecipient) });
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('verified');
   });
@@ -97,11 +131,13 @@ describe('OTP API Integration (Redis)', () => {
     const recipient = 'test@integration.com';
     await request(app).post('/otp/send').send({ recipient, channel: 'email' }).expect(200);
 
-    const record = await repo.get(recipient);
+    const normalizedRecipient = normalizeRecipient(recipient, 'email');
+    const record = await repo.get(normalizedRecipient);
     expect(record).not.toBeNull();
-    if (!record) return;
 
-    const res = await request(app).post('/otp/verify').send({ recipient, code: record.code });
+    const res = await request(app)
+      .post('/otp/verify')
+      .send({ recipient, code: emailProvider.getCode(normalizedRecipient) });
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('verified');
   });

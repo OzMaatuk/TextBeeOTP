@@ -2,6 +2,10 @@ import crypto from 'crypto';
 import { IOtpRepository } from '../repositories/otpRepository';
 import { config } from '../utils/config';
 import { IOtpProvider, OtpChannel } from '../providers/otpProvider';
+import { hashOtp, timingSafeOtpEqual } from '../utils/otpCrypto';
+import { normalizeRecipient } from '../utils/recipient';
+
+type RateLimitedError = Error & { code: 'RATE_LIMITED' };
 
 export class OtpService {
   private repo: IOtpRepository;
@@ -20,7 +24,7 @@ export class OtpService {
     const max = 10 ** this.length;
     // Use rejection sampling to eliminate modulo bias
     // Find the largest multiple of max that fits in 32 bits
-    const maxSafe = Math.floor((2 ** 32) / max) * max;
+    const maxSafe = Math.floor(2 ** 32 / max) * max;
     let bytes: number;
     do {
       bytes = crypto.randomBytes(4).readUInt32BE(0);
@@ -29,6 +33,7 @@ export class OtpService {
   }
 
   async sendOTP(recipient: string, channel: OtpChannel): Promise<void> {
+    const normalizedRecipient = normalizeRecipient(recipient, channel);
     const provider = this.providers.get(channel);
     if (!provider) {
       throw new Error(`Unsupported channel: ${channel}`);
@@ -38,36 +43,37 @@ export class OtpService {
     const maxAttempts = config.rateLimitMax;
 
     // Check rate limit BEFORE sending to prevent wasted SMS/email
-    const attempts = await this.repo.incrementSendAttempts(recipient, windowSeconds);
+    const attempts = await this.repo.incrementSendAttempts(normalizedRecipient, windowSeconds);
     if (attempts > maxAttempts) {
-      const err: any = new Error('rate_limited');
+      const err: RateLimitedError = Object.assign(new Error('rate_limited'), {
+        code: 'RATE_LIMITED' as const,
+      });
       err.code = 'RATE_LIMITED';
       throw err;
     }
 
-    const existing = await this.repo.get(recipient);
-    let code: string;
     const messageTemplate = (c: string) => `Your verification code is ${c}`;
+    const code = this.generateCode();
+    const expiresAt = Date.now() + this.ttlSeconds * 1000;
 
-    if (existing && !existing.isExpired()) {
-      code = existing.code;
-      await provider.sendOtp(recipient, messageTemplate(code));
-    } else {
-      code = this.generateCode();
-      const expiresAt = Date.now() + this.ttlSeconds * 1000;
-      await this.repo.save({ recipient, code, expiresAt });
-      await provider.sendOtp(recipient, messageTemplate(code));
-    }
+    await provider.sendOtp(normalizedRecipient, messageTemplate(code));
+    await this.repo.save({
+      recipient: normalizedRecipient,
+      code: hashOtp(normalizedRecipient, code),
+      expiresAt,
+    });
   }
 
   async verifyOTP(recipient: string, code: string): Promise<boolean> {
-    const record = await this.repo.get(recipient);
-    if (!record || record.isExpired() || record.code !== code) {
+    const normalizedRecipient = normalizeRecipient(recipient);
+    const record = await this.repo.get(normalizedRecipient);
+    if (!record || record.isExpired() || !timingSafeOtpEqual(record.code, normalizedRecipient, code)) {
       return false;
     }
 
     // invalidate after successful verification
-    await this.repo.delete(recipient);
+    await this.repo.delete(normalizedRecipient);
+    await this.repo.resetSendAttempts(normalizedRecipient);
     return true;
   }
 }

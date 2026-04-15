@@ -1,59 +1,45 @@
 import express, { Express } from 'express';
 import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
-import pino from 'pino';
-import { otpRouter } from './routes/otp';
-
+import swaggerUi from 'swagger-ui-express';
+import { createOtpRouter } from './routes/otp';
 import { openApiSpec } from './openapi';
 import { createLogger } from './utils/logger';
 import { config } from './utils/config';
+import { createOtpService } from './bootstrap';
 
 export function createServer(): Express {
   const app = express();
   app.set('trust proxy', 1);
   app.use(helmet());
-  app.use(express.json());
+  app.use(express.json({ limit: config.jsonBodyLimit }));
+  app.use(express.urlencoded({ extended: false, limit: config.jsonBodyLimit }));
 
   // OpenAPI documentation
-  if (config.nodeEnv !== 'production') {
-    const swaggerUi = require('swagger-ui-express');
+  if (config.exposeDocs) {
     app.use('/api-docs', swaggerUi.serve);
     app.get('/api-docs', swaggerUi.setup(openApiSpec));
   }
 
   const logger = createLogger();
+  const { otpService, repo } = createOtpService();
   app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
-    // attach logger to req for controllers
-    (req as any).log = logger;
+    req.log = logger;
     next();
   });
 
-  const limiter = rateLimit({
-    windowMs: config.rateLimitWindowMs,
-    max: config.rateLimitMax,
-    standardHeaders: true,
-    legacyHeaders: false,
-  });
-
-  app.use(limiter);
-
-  app.use('/otp', otpRouter);
+  app.use('/otp', createOtpRouter({ otpService, repo }));
 
   app.get('/health', (_req: express.Request, res: express.Response) => {
-    const health: any = {
+    res.json({
       status: 'ok',
       timestamp: new Date().toISOString(),
-      redis: config.redisUrl ? 'configured' : 'not_configured',
-    };
-    res.json(health);
+      environment: config.nodeEnv,
+    });
   });
 
-  app.get('/health/redis', (_req: express.Request, res: express.Response) => {
-    // This endpoint will be enhanced by the route that has access to the repo
-    res.json({
-      redisUrl: config.redisUrl ? config.redisUrl.replace(/:[^:@]+@/, ':****@') : null,
-      configured: !!config.redisUrl,
-    });
+  app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    req.log.error({ err }, 'Unhandled request error');
+    res.status(500).json({ error: 'internal_error' });
   });
 
   return app;

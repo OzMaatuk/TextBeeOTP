@@ -29,7 +29,6 @@ export class RedisOtpRepository implements IOtpRepository {
       this.redisDisabled = false;
       this.retryCount = 0;
     } else {
-      const self = this;
       const redisUrl = clientOrUrl || process.env.REDIS_URL || 'redis://127.0.0.1:6379';
 
       this.client = new Redis(redisUrl, {
@@ -37,17 +36,23 @@ export class RedisOtpRepository implements IOtpRepository {
         retryStrategy: (times: number) => {
           if (times > MAX_RETRY_ATTEMPTS) {
             // After max retries, stop trying and use fallback
-            self.redisDisabled = true;
-            self.healthy = false;
-            if (self.logger) {
-              self.logger.warn({ maxAttempts: MAX_RETRY_ATTEMPTS }, '[RedisOtpRepository] Max retry attempts reached. Disabling Redis and using in-memory storage.');
+            this.redisDisabled = true;
+            this.healthy = false;
+            if (this.logger) {
+              this.logger.warn(
+                { maxAttempts: MAX_RETRY_ATTEMPTS },
+                '[RedisOtpRepository] Max retry attempts reached. Disabling Redis and using in-memory storage.'
+              );
             }
             return null; // Stop retrying
           }
           // Exponential backoff: 1s, 2s, 4s (capped at 10s)
           const delay = Math.min(RETRY_DELAY_MS * Math.pow(2, times - 1), 10000);
-          if (self.logger) {
-            self.logger.debug({ attempt: times, maxAttempts: MAX_RETRY_ATTEMPTS, delay }, '[RedisOtpRepository] Retrying Redis connection');
+          if (this.logger) {
+            this.logger.debug(
+              { attempt: times, maxAttempts: MAX_RETRY_ATTEMPTS, delay },
+              '[RedisOtpRepository] Retrying Redis connection'
+            );
           }
           return delay;
         },
@@ -107,11 +112,17 @@ export class RedisOtpRepository implements IOtpRepository {
           this.redisDisabled = true;
           this.healthy = false;
           if (this.logger) {
-            this.logger.warn({ retryCount: this.retryCount, maxAttempts: MAX_RETRY_ATTEMPTS }, '[RedisOtpRepository] Failed to connect to Redis after max attempts. Using in-memory storage.');
+            this.logger.warn(
+              { retryCount: this.retryCount, maxAttempts: MAX_RETRY_ATTEMPTS },
+              '[RedisOtpRepository] Failed to connect to Redis after max attempts. Using in-memory storage.'
+            );
           }
         } else {
           if (this.logger) {
-            this.logger.warn({ retryCount: this.retryCount, maxAttempts: MAX_RETRY_ATTEMPTS }, '[RedisOtpRepository] Initial Redis connection timeout. Will use in-memory storage.');
+            this.logger.warn(
+              { retryCount: this.retryCount, maxAttempts: MAX_RETRY_ATTEMPTS },
+              '[RedisOtpRepository] Initial Redis connection timeout. Will use in-memory storage.'
+            );
           }
         }
         reject(new Error('Connection timeout'));
@@ -148,7 +159,7 @@ export class RedisOtpRepository implements IOtpRepository {
     try {
       await connectionPromise;
       // Connection successful - will be logged in 'ready' event handler
-    } catch (err) {
+    } catch (_err) {
       // Connection failed - handled in promise
       if (!this.redisDisabled) {
         this.healthy = false;
@@ -176,7 +187,7 @@ export class RedisOtpRepository implements IOtpRepository {
       });
       const ttl = Math.ceil((record.expiresAt - Date.now()) / 1000) + 60;
       await this.client.expire(key, ttl);
-    } catch (err) {
+    } catch (_err) {
       this.healthy = false;
       return this.fallback.save(record);
     }
@@ -196,7 +207,7 @@ export class RedisOtpRepository implements IOtpRepository {
       };
       const isExpired = () => Date.now() > rec.expiresAt;
       return { ...rec, isExpired };
-    } catch (err) {
+    } catch (_err) {
       this.healthy = false;
       return this.fallback.get(recipient);
     }
@@ -207,7 +218,7 @@ export class RedisOtpRepository implements IOtpRepository {
     try {
       const key = this.recordKey(recipient);
       await this.client.del(key);
-    } catch (err) {
+    } catch (_err) {
       this.healthy = false;
       return this.fallback.delete(recipient);
     }
@@ -224,7 +235,7 @@ export class RedisOtpRepository implements IOtpRepository {
       if (!res) return 0;
       const count = Number(res[0][1]);
       return count;
-    } catch (err) {
+    } catch (_err) {
       this.healthy = false;
       return this.fallback.incrementSendAttempts(recipient, windowSeconds);
     }
@@ -235,7 +246,7 @@ export class RedisOtpRepository implements IOtpRepository {
     try {
       const key = this.attemptKey(recipient);
       await this.client.del(key);
-    } catch (err) {
+    } catch (_err) {
       this.healthy = false;
       return this.fallback.resetSendAttempts(recipient);
     }
