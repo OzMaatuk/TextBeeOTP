@@ -43,8 +43,12 @@ const loading = document.getElementById('loading');
 
 // Add event listeners for buttons
 document.getElementById('otpBtn').addEventListener('click', showOtpForm);
-document.getElementById('googleBtn').addEventListener('click', () => loginWithProvider('google'));
-document.getElementById('facebookBtn').addEventListener('click', () => loginWithProvider('facebook'));
+if (document.getElementById('googleBtn')) {
+  document.getElementById('googleBtn').addEventListener('click', () => loginWithProvider('google'));
+}
+if (document.getElementById('facebookBtn')) {
+  document.getElementById('facebookBtn').addEventListener('click', () => loginWithProvider('facebook'));
+}
 document.getElementById('backBtn').addEventListener('click', showMethodSelector);
 
 // Update labels when channel changes
