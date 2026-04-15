@@ -73,7 +73,7 @@ export async function createOidcProvider(app: Express): Promise<any> {
       }
       return {
         accountId: account.accountId,
-        async claims(use: string, scope: string) {
+        async claims(use: string, _scope: string) {
           if (use === 'id_token') {
             return {
               sub: account.accountId,

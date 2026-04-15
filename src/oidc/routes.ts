@@ -1,14 +1,14 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response } from 'express';
 import { createLogger } from '../utils/logger.js';
 
 const logger = createLogger();
 
 /**
  * Creates OIDC-related routes.
- * 
+ *
  * Note: This OIDC provider is designed for external authentication providers (Google, Facebook, etc.)
  * via oauth2-proxy. It does NOT handle OTP verification.
- * 
+ *
  * For OTP-based authentication, use the /otp endpoints directly.
  */
 export function createOidcRoutes(): Router {

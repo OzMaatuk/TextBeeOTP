@@ -14,4 +14,9 @@ module.exports = {
   testEnvironmentOptions: {
     NODE_ENV: 'test',
   },
+  globals: {
+    'ts-jest': {
+      useESM: true,
+    },
+  },
 };

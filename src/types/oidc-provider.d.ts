@@ -1,5 +1,5 @@
 declare module 'oidc-provider' {
-  import { Express, Request, Response, NextFunction } from 'express';
+  import { Request, Response, NextFunction } from 'express';
 
   interface ProviderConfig {
     clients?: any[];

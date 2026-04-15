@@ -311,7 +311,7 @@
       <div class="method-title">Choose Your Authentication Method</div>
       
       <div class="methods">
-        <button type="button" class="method-btn method-otp" onclick="showOtpForm()">
+        <button type="button" class="method-btn method-otp" id="otpBtn">
           <span class="method-icon">📧</span>
           <span class="method-name">Email or Phone</span>
           <span class="method-desc">Verify with an OTP code</span>
@@ -319,17 +319,17 @@
         
         <div class="divider">OR</div>
         
-        <button type="button" class="method-btn method-social google" onclick="loginWithProvider('google')">
+        <button type="button" class="method-btn method-social google" id="googleBtn">
           <span class="method-icon">🔴</span>
           <span class="method-name">Continue with Google</span>
         </button>
         
-        <button type="button" class="method-btn method-social github" onclick="loginWithProvider('github')">
+        <button type="button" class="method-btn method-social github" id="githubBtn">
           <span class="method-icon">⚫</span>
           <span class="method-name">Continue with GitHub</span>
         </button>
         
-        <button type="button" class="method-btn method-social linkedin" onclick="loginWithProvider('linkedin')">
+        <button type="button" class="method-btn method-social linkedin" id="linkedinBtn">
           <span class="method-icon">🔵</span>
           <span class="method-name">Continue with LinkedIn</span>
         </button>
@@ -338,7 +338,7 @@
 
     <form id="loginForm" style="display: none;">
       <div class="form-header">
-        <button type="button" class="back-btn" onclick="showMethodSelector()">← Back</button>
+        <button type="button" class="back-btn" id="backBtn">← Back</button>
         <span class="form-title">Email or Phone Verification</span>
       </div>
       <div class="error-message" id="errorMessage"></div>
@@ -380,133 +380,6 @@
     </form>
   </div>
 
-  <script>
-    // OAuth2-proxy configuration
-    // Update this to match your oauth2-proxy deployment
-    const OAUTH2_PROXY_URL = (function() {
-      // Detect oauth2-proxy URL - adjust based on your setup
-      const protocol = window.location.protocol;
-      const hostname = window.location.hostname;
-      const isDev = hostname === 'localhost' || hostname === '127.0.0.1';
-      return isDev ? 'http://localhost:4180' : `${protocol}//${hostname}`;
-    })();
-
-    // Method selection functions
-    function showOtpForm() {
-      document.getElementById('methodSelector').style.display = 'none';
-      document.getElementById('loginForm').style.display = 'block';
-      document.getElementById('recipient').focus();
-    }
-
-    function showMethodSelector() {
-      document.getElementById('loginForm').style.display = 'none';
-      document.getElementById('methodSelector').style.display = 'block';
-    }
-
-    function loginWithProvider(provider) {
-      // Redirect to oauth2-proxy to start authentication with the specified provider
-      // oauth2-proxy will handle the OAuth2 flow with the provider and redirect back
-      const currentUrl = window.location.href.split('?')[0]; // Remove any query params
-      const redirectUrl = encodeURIComponent(currentUrl);
-      
-      // oauth2-proxy start endpoint format: /oauth2/start?rd=REDIRECT_URL&provider=PROVIDER
-      const oauth2StartUrl = `${OAUTH2_PROXY_URL}/oauth2/start?rd=${redirectUrl}&provider=${provider}`;
-      
-      window.location.href = oauth2StartUrl;
-    }
-
-    const form = document.getElementById('loginForm');
-    const emailChannel = document.getElementById('emailChannel');
-    const smsChannel = document.getElementById('smsChannel');
-    const recipientInput = document.getElementById('recipient');
-    const recipientLabel = document.getElementById('recipientLabel');
-    const helperText = document.getElementById('helperText');
-    const errorMessage = document.getElementById('errorMessage');
-    const submitBtn = document.getElementById('submitBtn');
-    const loading = document.getElementById('loading');
-
-    // Update labels when channel changes
-    emailChannel.addEventListener('change', () => {
-      recipientLabel.textContent = 'Email Address';
-      recipientInput.type = 'email';
-      recipientInput.placeholder = 'your@email.com';
-      helperText.textContent = "We'll send a 6-digit code to this email";
-      recipientInput.value = '';
-    });
-
-    smsChannel.addEventListener('change', () => {
-      recipientLabel.textContent = 'Phone Number';
-      recipientInput.type = 'tel';
-      recipientInput.placeholder = '+1 (555) 123-4567';
-      helperText.textContent = "We'll send a 6-digit code to this phone number";
-      recipientInput.value = '';
-    });
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      const channel = document.querySelector('input[name="channel"]:checked').value;
-      const recipient = recipientInput.value.trim();
-
-      if (!recipient) {
-        showError('Please enter your email or phone number');
-        return;
-      }
-
-      // Basic validation
-      if (channel === 'email' && !recipient.includes('@')) {
-        showError('Please enter a valid email address');
-        return;
-      }
-
-      if (channel === 'sms' && !recipient.replace(/\D/g, '').match(/\d{10,}/)) {
-        showError('Please enter a valid phone number');
-        return;
-      }
-
-      submitBtn.style.display = 'none';
-      form.style.opacity = '0.6';
-      loading.style.display = 'block';
-      errorMessage.classList.remove('show');
-
-      try {
-        const response = await fetch('/otp/send', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ recipient, channel }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          showError(data.error || 'Failed to send code');
-          submitBtn.style.display = 'block';
-          form.style.opacity = '1';
-          loading.style.display = 'none';
-          return;
-        }
-
-        // Success - redirect to verification page
-        // Store recipient and channel in sessionStorage for the verify page
-        sessionStorage.setItem('otpRecipient', recipient);
-        sessionStorage.setItem('otpChannel', channel);
-        
-        // Redirect to verify page
-        window.location.href = '/verify';
-      } catch (err) {
-        showError('Network error. Please try again.');
-        submitBtn.style.display = 'block';
-        form.style.opacity = '1';
-        loading.style.display = 'none';
-      }
-    });
-
-    function showError(message) {
-      errorMessage.textContent = message;
-      errorMessage.classList.add('show');
-    }
-  </script>
+  <script src="/views/login.js"></script>
 </body>
 </html>

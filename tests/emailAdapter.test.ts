@@ -23,7 +23,7 @@ describe('EmailAdapter', () => {
       process.env.SMTP_PORT = '465';
       process.env.SMTP_SECURE = 'true';
 
-      const adapter = new EmailAdapter(undefined, 'test@example.com');
+      new EmailAdapter(undefined, 'test@example.com');
 
       expect(nodemailer.createTransport).toHaveBeenCalledWith(
         expect.objectContaining({
