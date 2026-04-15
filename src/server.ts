@@ -16,6 +16,7 @@ export interface ServerInstance {
 export function createServer(): ServerInstance {
   const app = express();
   app.set('trust proxy', 1);
+
   app.use(helmet());
   app.use(express.json({ limit: config.jsonBodyLimit }));
   app.use(express.urlencoded({ extended: false, limit: config.jsonBodyLimit }));
@@ -33,13 +34,36 @@ export function createServer(): ServerInstance {
     next();
   });
 
+  // OTP endpoints - standalone authentication via /otp/send and /otp/verify
   app.use('/otp', createOtpRouter({ otpService, repo, providers }));
+
+  // Setup OIDC provider (only if enabled and not in test mode)
+  // OIDC is for external authentication (Google, Facebook, etc.) via oauth2-proxy
+  if (config.enableOidc && process.env.NODE_ENV !== 'test') {
+    try {
+      const { createOidcProvider } = require('./oidc/provider');
+      const { createOidcRoutes } = require('./oidc/routes');
+      createOidcProvider(app);
+      app.use('/oauth2', createOidcRoutes());
+      logger.info(
+        { clientId: config.oidcClientId, issuer: config.oidcServerUrl },
+        'OIDC provider enabled for external authentication'
+      );
+    } catch (err) {
+      logger.warn({ err }, 'Failed to initialize OIDC provider');
+    }
+  }
 
   app.get('/health', (_req: express.Request, res: express.Response) => {
     res.json({
       status: 'ok',
       timestamp: new Date().toISOString(),
       environment: config.nodeEnv,
+      oidcEnabled: config.enableOidc,
+      authMethods: {
+        otp: 'Available at /otp/send and /otp/verify',
+        oidc: config.enableOidc ? 'Available at /.well-known/openid-configuration' : 'Disabled',
+      },
     });
   });
 

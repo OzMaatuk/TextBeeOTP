@@ -261,4 +261,19 @@ export class RedisOtpRepository implements IOtpRepository {
       usingFallback: !this.healthy,
     };
   }
+
+  async destroy(): Promise<void> {
+    if (this.logger) {
+      this.logger.info('[RedisOtpRepository] Closing Redis connection');
+    }
+    try {
+      await this.client.quit();
+    } catch (err) {
+      if (this.logger) {
+        this.logger.warn({ err }, '[RedisOtpRepository] Error closing Redis connection');
+      }
+    }
+    // Also destroy fallback in-memory repository
+    await this.fallback.destroy();
+  }
 }

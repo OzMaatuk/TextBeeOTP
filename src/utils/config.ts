@@ -100,4 +100,22 @@ export const config = {
   get exposeDocs() {
     return !this.isProduction;
   },
+  get oidcServerUrl() {
+    return validateString(process.env.OIDC_SERVER_URL, 'OIDC_SERVER_URL') || undefined;
+  },
+  get oidcClientId() {
+    return validateString(process.env.OIDC_CLIENT_ID, 'OIDC_CLIENT_ID') || 'oauth2-proxy';
+  },
+  get oidcClientSecret() {
+    return validateString(process.env.OIDC_CLIENT_SECRET, 'OIDC_CLIENT_SECRET') || undefined;
+  },
+  get oidcRedirectUris() {
+    const raw = process.env.OIDC_REDIRECT_URIS;
+    if (!raw) return undefined;
+    return raw.split(',').map((uri) => uri.trim());
+  },
+  get enableOidc() {
+    const raw = process.env.ENABLE_OIDC || 'false';
+    return /^(1|true|yes)$/i.test(raw);
+  },
 };

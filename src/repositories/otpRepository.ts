@@ -14,4 +14,7 @@ export interface IOtpRepository {
   // Per-recipient rate limiting helpers
   incrementSendAttempts(recipient: string, windowSeconds: number): Promise<number>;
   resetSendAttempts(recipient: string): Promise<void>;
+  // Health status and cleanup
+  getHealthStatus(): { [key: string]: any };
+  destroy(): Promise<void> | void;
 }

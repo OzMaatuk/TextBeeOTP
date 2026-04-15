@@ -1,31 +1,14 @@
 import { Router, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
-import { z } from 'zod';
 import { OtpService } from '../services/otpService';
 import { config } from '../utils/config';
 import { IOtpRepository } from '../repositories/otpRepository';
 import { IOtpProvider, OtpChannel } from '../providers/otpProvider';
+import { sendSchema, verifySchema } from '../schemas/otp';
 
 function isRateLimitedError(error: unknown): error is { code: string } {
   return typeof error === 'object' && error !== null && 'code' in error;
 }
-
-const sendSchema = z
-  .object({
-    recipient: z.string().trim().min(5).max(320),
-    channel: z.enum(['sms', 'email']),
-  })
-  .strict();
-
-const verifySchema = z
-  .object({
-    recipient: z.string().trim().min(5).max(320),
-    code: z
-      .string()
-      .trim()
-      .regex(/^\d{4,10}$/),
-  })
-  .strict();
 
 type RouterDeps = {
   otpService: OtpService;

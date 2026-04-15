@@ -5,30 +5,13 @@ import { RedisOtpRepository } from '../src/repositories/redisOtpRepo';
 import Redis from 'ioredis';
 import RedisMock from 'ioredis-mock';
 import { Router } from 'express';
-import { z } from 'zod';
 import { IOtpProvider, OtpChannel } from '../src/providers/otpProvider';
 import { normalizeRecipient } from '../src/utils/recipient';
+import { sendSchema, verifySchema } from '../src/schemas/otp';
 
 function isRateLimitedError(error: unknown): error is { code: string } {
   return typeof error === 'object' && error !== null && 'code' in error;
 }
-
-const sendSchema = z
-  .object({
-    recipient: z.string().trim().min(5).max(320),
-    channel: z.enum(['sms', 'email']),
-  })
-  .strict();
-
-const verifySchema = z
-  .object({
-    recipient: z.string().trim().min(5).max(320),
-    code: z
-      .string()
-      .trim()
-      .regex(/^\d{4,10}$/),
-  })
-  .strict();
 
 class MockProvider implements IOtpProvider {
   public lastMessageByRecipient = new Map<string, string>();
