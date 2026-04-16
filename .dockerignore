@@ -52,3 +52,6 @@ docs/
 .prettierrc
 .eslintrc.json
 .editorconfig
+
+# SSL certificates (local dev only)
+certs/

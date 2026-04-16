@@ -42,6 +42,10 @@ tmp/
 # Documents
 textbeedocs.md
 
+# SSL certificates (local dev only, not for deployment)
+certs/
+
 # Zoho Catalyst
 app-config.json
 .catalystrc
+catalyst.json
