@@ -345,7 +345,8 @@
             <input type="radio" id="emailChannel" name="channel" value="email" checked>
             <label for="emailChannel">📧 Email</label>
           </div>
-          <div class="channel-option">
+          <!-- SMS OTP channel - shown/hidden dynamically via window.SMS_OTP_ENABLED -->
+          <div class="channel-option" id="smsChannelOption">
             <input type="radio" id="smsChannel" name="channel" value="sms">
             <label for="smsChannel">📱 SMS</label>
           </div>

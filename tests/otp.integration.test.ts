@@ -45,7 +45,7 @@ function makeTestApp(repo: RedisOtpRepository) {
     const parse = sendSchema.safeParse(req.body);
     if (!parse.success) return res.status(400).json({ error: 'invalid_input', details: parse.error.format() });
     try {
-      await otpService.sendOTP(parse.data.recipient, parse.data.channel);
+      await otpService.sendOTP(parse.data.recipient, parse.data.channel as OtpChannel);
       return res.status(200).json({ status: 'sent' });
     } catch (err: unknown) {
       if (isRateLimitedError(err) && err.code === 'RATE_LIMITED') {
@@ -89,6 +89,7 @@ describe('OTP API Integration (Redis)', () => {
     process.env.RATE_LIMIT_WINDOW_MS = '1000'; // 1s window
     process.env.RATE_LIMIT_MAX = '3';
     process.env.OTP_TTL_SECONDS = '60';
+    process.env.ENABLE_SMS_OTP = 'true'; // integration tests exercise the SMS channel directly
   });
 
   afterEach(async () => {

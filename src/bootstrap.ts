@@ -22,10 +22,20 @@ export function createOtpService() {
 
   // Validate providers at startup
   if (config.isProduction) {
+    // SMS temporarily disabled
+    /*
     try {
       smsAdapter.validateCredentials();
     } catch (err) {
       throw new Error(`SMS provider validation failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    */
+    if (config.enableSmsOtp) {
+      try {
+        smsAdapter.validateCredentials();
+      } catch (err) {
+        throw new Error(`SMS provider validation failed: ${err instanceof Error ? err.message : String(err)}`);
+      }
     }
     try {
       emailAdapter.validateCredentials();
@@ -35,7 +45,11 @@ export function createOtpService() {
   }
 
   const providers = new Map<OtpChannel, IOtpProvider>();
-  providers.set('sms', smsAdapter);
+  // SMS temporarily disabled
+  // providers.set('sms', smsAdapter);
+  if (config.enableSmsOtp) {
+    providers.set('sms', smsAdapter);
+  }
   providers.set('email', emailAdapter);
 
   return {

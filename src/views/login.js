@@ -34,12 +34,18 @@ function showError(message) {
 const form = document.getElementById('loginForm');
 const emailChannel = document.getElementById('emailChannel');
 const smsChannel = document.getElementById('smsChannel');
+const smsChannelOption = document.getElementById('smsChannelOption');
 const recipientInput = document.getElementById('recipient');
 const recipientLabel = document.getElementById('recipientLabel');
 const helperText = document.getElementById('helperText');
 const errorMessage = document.getElementById('errorMessage');
 const submitBtn = document.getElementById('submitBtn');
 const loading = document.getElementById('loading');
+
+// Show or hide SMS option based on server-side feature flag
+if (!window.SMS_OTP_ENABLED) {
+  if (smsChannelOption) smsChannelOption.style.display = 'none';
+}
 
 // Add event listeners for buttons
 document.getElementById('otpBtn').addEventListener('click', showOtpForm);
@@ -60,13 +66,15 @@ emailChannel.addEventListener('change', () => {
   recipientInput.value = '';
 });
 
-smsChannel.addEventListener('change', () => {
-  recipientLabel.textContent = 'Phone Number';
-  recipientInput.type = 'tel';
-  recipientInput.placeholder = '+1 (555) 123-4567';
-  helperText.textContent = "We'll send a 6-digit code to this phone number";
-  recipientInput.value = '';
-});
+if (smsChannel) {
+  smsChannel.addEventListener('change', () => {
+    recipientLabel.textContent = 'Phone Number';
+    recipientInput.type = 'tel';
+    recipientInput.placeholder = '+1 (555) 123-4567';
+    helperText.textContent = "We'll send a 6-digit code to this phone number";
+    recipientInput.value = '';
+  });
+}
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();

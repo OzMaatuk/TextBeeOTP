@@ -41,6 +41,9 @@ export function createUiRouter(): Router {
     const publicApiUrl = process.env.API_PUBLIC_URL || `${protocol}://localhost:${config.apiPort}`;
     injections += `<script>window.API_BASE_URL = '${publicApiUrl}';</script>`;
 
+    // Expose SMS OTP feature flag to the frontend
+    injections += `<script>window.SMS_OTP_ENABLED = ${config.enableSmsOtp};</script>`;
+
     if (!config.enableOidc) {
       // Cleanly inject CSS to hide social buttons rather than doing brittle HTML regex parsing
       injections += '<style>.method-social, .divider { display: none !important; }</style>';

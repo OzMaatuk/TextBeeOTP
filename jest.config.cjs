@@ -1,10 +1,12 @@
 /** @type {import('ts-jest').JestConfigWithTsJest} */
 module.exports = {
-  preset: 'ts-jest',
   testEnvironment: 'node',
   coverageProvider: 'v8',
   setupFiles: ['dotenv/config'],
   collectCoverageFrom: ['src/**/*.ts'],
+  transform: {
+    '^.+\\.tsx?$': ['ts-jest', { useESM: false }],
+  },
   transformIgnorePatterns: [
     'node_modules/(?!oidc-provider)',
   ],
@@ -13,10 +15,5 @@ module.exports = {
   },
   testEnvironmentOptions: {
     NODE_ENV: 'test',
-  },
-  globals: {
-    'ts-jest': {
-      useESM: false,
-    },
   },
 };

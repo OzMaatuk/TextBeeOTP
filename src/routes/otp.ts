@@ -40,7 +40,7 @@ export function createOtpRouter({ otpService, repo, providers }: RouterDeps): Ro
     const { recipient, channel } = parse.data;
 
     try {
-      await otpService.sendOTP(recipient, channel);
+      await otpService.sendOTP(recipient, channel as OtpChannel);
       return res.status(200).json({ status: 'sent' });
     } catch (err: unknown) {
       req.log.error({ err, recipient, channel }, 'Error sending OTP');

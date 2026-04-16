@@ -122,4 +122,8 @@ export const config = {
     const raw = process.env.ENABLE_OIDC || 'false';
     return /^(1|true|yes)$/i.test(raw);
   },
+  get enableSmsOtp() {
+    const raw = process.env.ENABLE_SMS_OTP || 'false';
+    return /^(1|true|yes)$/i.test(raw);
+  },
 };
