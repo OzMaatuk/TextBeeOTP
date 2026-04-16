@@ -39,4 +39,9 @@ coverage/
 .cache/
 tmp/
 
+# Documents
 textbeedocs.md
+
+# Zoho Catalyst
+app-config.json
+.catalystrc
