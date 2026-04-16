@@ -31,35 +31,56 @@ try {
   logger.info('No SSL certificates found in certs/ directory, falling back to HTTP');
 }
 
+const isSamePort = apiPort === uiPort;
+
+if (isSamePort) {
+  apiApp.use(uiApp);
+}
+
 if (credentials) {
   apiServer = https.createServer(credentials, apiApp).listen(apiPort, () => {
-    logger.info({ port: apiPort }, 'OTP API service listening (HTTPS)');
+    logger.info({ port: apiPort }, isSamePort ? 'OTP API & UI service listening (HTTPS)' : 'OTP API service listening (HTTPS)');
   });
-  uiServer = https.createServer(credentials, uiApp).listen(uiPort, () => {
-    logger.info({ port: uiPort }, 'OTP UI service listening (HTTPS)');
-  });
+  if (!isSamePort) {
+    uiServer = https.createServer(credentials, uiApp).listen(uiPort, () => {
+      logger.info({ port: uiPort }, 'OTP UI service listening (HTTPS)');
+    });
+  } else {
+    uiServer = apiServer;
+  }
 } else {
   apiServer = apiApp.listen(apiPort, () => {
-    logger.info({ port: apiPort }, 'OTP API service listening (HTTP)');
+    logger.info({ port: apiPort }, isSamePort ? 'OTP API & UI service listening (HTTP)' : 'OTP API service listening (HTTP)');
   });
-  uiServer = uiApp.listen(uiPort, () => {
-    logger.info({ port: uiPort }, 'OTP UI service listening (HTTP)');
-  });
+  if (!isSamePort) {
+    uiServer = uiApp.listen(uiPort, () => {
+      logger.info({ port: uiPort }, 'OTP UI service listening (HTTP)');
+    });
+  } else {
+    uiServer = apiServer;
+  }
 }
 
 // Graceful shutdown
 const shutdown = (signal: string) => {
   logger.info({ signal }, 'Shutdown signal received');
-  apiServer.close(() => {
-    uiServer.close(() => {
-      // Clean up repositories
-      if (repo && typeof repo === 'object' && 'destroy' in repo && typeof (repo as any).destroy === 'function') {
-        (repo as any).destroy();
-      }
-      logger.info('Servers closed');
-      process.exit(0);
+  
+  const closeRepoAndExit = () => {
+    if (repo && typeof repo === 'object' && 'destroy' in repo && typeof (repo as any).destroy === 'function') {
+      (repo as any).destroy();
+    }
+    logger.info('Servers closed');
+    process.exit(0);
+  };
+
+  if (isSamePort) {
+    apiServer.close(() => closeRepoAndExit());
+  } else {
+    apiServer.close(() => {
+      uiServer.close(() => closeRepoAndExit());
     });
-  });
+  }
+
   // Force exit after 30 seconds
   setTimeout(() => {
     logger.error('Forced shutdown after 30 seconds');
