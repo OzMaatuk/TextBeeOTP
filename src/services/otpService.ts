@@ -22,14 +22,7 @@ export class OtpService {
 
   private generateCode(): string {
     const max = 10 ** this.length;
-    // Use rejection sampling to eliminate modulo bias
-    // Find the largest multiple of max that fits in 32 bits
-    const maxSafe = Math.floor(2 ** 32 / max) * max;
-    let bytes: number;
-    do {
-      bytes = crypto.randomBytes(4).readUInt32BE(0);
-    } while (bytes >= maxSafe);
-    return (bytes % max).toString().padStart(this.length, '0');
+    return crypto.randomInt(0, max).toString().padStart(this.length, '0');
   }
 
   async sendOTP(recipient: string, channel: OtpChannel): Promise<void> {

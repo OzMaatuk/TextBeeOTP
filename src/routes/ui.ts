@@ -24,9 +24,15 @@ export function createUiRouter(): Router {
   // Serve static JS files from views directory
   router.use('/views', express.static(_viewsDir));
 
+  let cachedLoginHtml: string | null = null;
+
   router.get('/login', async (_req: Request, res: Response) => {
-    const filePath = path.join(_viewsDir, 'login.html');
-    let html = await fs.readFile(filePath, 'utf-8');
+    if (!cachedLoginHtml) {
+      const filePath = path.join(_viewsDir, 'login.html');
+      cachedLoginHtml = await fs.readFile(filePath, 'utf-8');
+    }
+    
+    let html = cachedLoginHtml;
     
     let injections = '';
     
