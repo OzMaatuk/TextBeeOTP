@@ -18,6 +18,7 @@ build/
 dist/
 
 # Development
+.env
 .env*.local
 .env.development
 .env.test
