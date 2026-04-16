@@ -22,13 +22,16 @@ let apiServer: import('http').Server | import('https').Server;
 let uiServer: import('http').Server | import('https').Server;
 
 let credentials = null;
-try {
-  const privateKey = fs.readFileSync(path.resolve(__dirname, '../certs/server.key'), 'utf8');
-  const certificate = fs.readFileSync(path.resolve(__dirname, '../certs/server.crt'), 'utf8');
-  credentials = { key: privateKey, cert: certificate };
-  logger.info('Loaded SSL certificates from certs/ directory');
-} catch (e) {
-  logger.info('No SSL certificates found in certs/ directory, falling back to HTTP');
+// Skip SSL in production — Catalyst handles TLS termination externally
+if (config.nodeEnv !== 'production') {
+  try {
+    const privateKey = fs.readFileSync(path.resolve(__dirname, '../certs/server.key'), 'utf8');
+    const certificate = fs.readFileSync(path.resolve(__dirname, '../certs/server.crt'), 'utf8');
+    credentials = { key: privateKey, cert: certificate };
+    logger.info('Loaded SSL certificates from certs/ directory');
+  } catch (e) {
+    logger.info('No SSL certificates found in certs/ directory, falling back to HTTP');
+  }
 }
 
 const isSamePort = apiPort === uiPort;
