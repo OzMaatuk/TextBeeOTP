@@ -48,10 +48,11 @@ export function createUiRouter({ otpService, providers }: UiRouterDeps): { pages
 
     // UI calls /ui/otp/send and /ui/otp/verify (proxy routes mounted before auth middleware).
     // No API key is exposed to the browser — the proxy calls the OTP service internally.
-    injections += `<script>window.API_BASE_URL = '/ui';</script>`;
+    const nonce = res.locals.cspNonce ? ` nonce="${res.locals.cspNonce}"` : '';
+    injections += `<script${nonce}>window.API_BASE_URL = '/ui';</script>`;
 
     // Expose SMS OTP feature flag to the frontend
-    injections += `<script>window.SMS_OTP_ENABLED = ${config.enableSmsOtp};</script>`;
+    injections += `<script${nonce}>window.SMS_OTP_ENABLED = ${config.enableSmsOtp};</script>`;
 
     if (!config.enableOidc) {
       injections += '<style>.method-social, .divider { display: none !important; }</style>';
@@ -63,9 +64,22 @@ export function createUiRouter({ otpService, providers }: UiRouterDeps): { pages
     res.send(html);
   });
 
-  pagesRouter.get('/verify', (_req: Request, res: Response) => {
-    const filePath = path.join(_viewsDir, 'verify.html');
-    res.sendFile(filePath);
+  let cachedVerifyHtml: string | null = null;
+
+  pagesRouter.get('/verify', async (_req: Request, res: Response) => {
+    if (!cachedVerifyHtml) {
+      const filePath = path.join(_viewsDir, 'verify.html');
+      cachedVerifyHtml = await fs.readFile(filePath, 'utf-8');
+    }
+
+    const nonce = res.locals.cspNonce ? ` nonce="${res.locals.cspNonce}"` : '';
+    const html = cachedVerifyHtml.replace(
+      '</head>',
+      `<script${nonce}>window.API_BASE_URL = '/ui';</script></head>`,
+    );
+
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
   });
 
   // --- Proxy router: internal OTP routes for the browser UI ---

@@ -1,5 +1,6 @@
-import express, { Express } from 'express';
+import express, { Express, Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
+import crypto from 'crypto';
 import swaggerUi from 'swagger-ui-express';
 import { createOtpRouter } from './routes/otp.js';
 import { createUiRouter } from './routes/ui.js';
@@ -16,13 +17,33 @@ export interface ServerInstance {
   repo: IOtpRepository;
 }
 
+function nonceMiddleware(req: Request, res: Response, next: NextFunction) {
+  res.locals.cspNonce = crypto.randomBytes(16).toString('base64');
+  next();
+}
+
+function helmetWithNonce() {
+  return [
+    nonceMiddleware,
+    (req: Request, res: Response, next: NextFunction) =>
+      helmet({
+        contentSecurityPolicy: {
+          directives: {
+            ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+            'script-src': ["'self'", `'nonce-${res.locals.cspNonce}'`],
+          },
+        },
+      })(req, res, next),
+  ];
+}
+
 export function createServer(): ServerInstance {
   const { otpService, repo, providers, logger, securityConfig } = createOtpService();
 
   const apiApp = express();
   apiApp.set('trust proxy', securityConfig.trustProxy);
 
-  apiApp.use(helmet());
+  apiApp.use(helmetWithNonce());
   apiApp.use(express.json({ limit: config.jsonBodyLimit }));
   apiApp.use(express.urlencoded({ extended: false, limit: config.jsonBodyLimit }));
 
@@ -53,7 +74,7 @@ export function createServer(): ServerInstance {
   // Create separate UI Application (used when UI_PORT != API_PORT)
   const uiApp = express();
   uiApp.set('trust proxy', 1);
-  uiApp.use(helmet());
+  uiApp.use(helmetWithNonce());
   uiApp.use(express.json({ limit: config.jsonBodyLimit }));
   uiApp.use(express.urlencoded({ extended: false, limit: config.jsonBodyLimit }));
   uiApp.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
