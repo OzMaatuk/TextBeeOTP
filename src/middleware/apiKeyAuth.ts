@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from 'crypto';
+import { timingSafeEqual } from 'crypto';
 import type { RequestHandler } from 'express';
 import type { Logger } from 'pino';
 import type { KeyStoreEntry } from '../utils/securityConfig.js';
@@ -25,10 +25,7 @@ function safeCompare(a: string, b: string): boolean {
   return timingSafeEqual(bufA, bufB);
 }
 
-function findMatchingKey(
-  submittedKey: string,
-  keys: KeyStoreEntry[],
-): KeyStoreEntry | undefined {
+function findMatchingKey(submittedKey: string, keys: KeyStoreEntry[]): KeyStoreEntry | undefined {
   for (const entry of keys) {
     if (entry.enabled && safeCompare(submittedKey, entry.key)) {
       return entry;

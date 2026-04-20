@@ -29,7 +29,7 @@ if (config.nodeEnv !== 'production') {
     const certificate = fs.readFileSync(path.resolve(__dirname, '../certs/server.crt'), 'utf8');
     credentials = { key: privateKey, cert: certificate };
     logger.info('Loaded SSL certificates from certs/ directory');
-  } catch (e) {
+  } catch (_e) {
     logger.info('No SSL certificates found in certs/ directory, falling back to HTTP');
   }
 }
@@ -40,13 +40,16 @@ if (isSamePort) {
   logger.warn(
     { apiPort, uiPort },
     'API_PORT and UI_PORT are the same. UI and API are served on a single port. ' +
-    'Use separate ports in production for proper security isolation.'
+      'Use separate ports in production for proper security isolation.'
   );
 }
 
 if (credentials) {
   apiServer = https.createServer(credentials, apiApp).listen(apiPort, () => {
-    logger.info({ port: apiPort }, isSamePort ? 'OTP API & UI service listening (HTTPS)' : 'OTP API service listening (HTTPS)');
+    logger.info(
+      { port: apiPort },
+      isSamePort ? 'OTP API & UI service listening (HTTPS)' : 'OTP API service listening (HTTPS)'
+    );
   });
   if (!isSamePort) {
     uiServer = https.createServer(credentials, uiApp).listen(uiPort, () => {
@@ -57,7 +60,10 @@ if (credentials) {
   }
 } else {
   apiServer = apiApp.listen(apiPort, () => {
-    logger.info({ port: apiPort }, isSamePort ? 'OTP API & UI service listening (HTTP)' : 'OTP API service listening (HTTP)');
+    logger.info(
+      { port: apiPort },
+      isSamePort ? 'OTP API & UI service listening (HTTP)' : 'OTP API service listening (HTTP)'
+    );
   });
   if (!isSamePort) {
     uiServer = uiApp.listen(uiPort, () => {
@@ -71,7 +77,7 @@ if (credentials) {
 // Graceful shutdown
 const shutdown = (signal: string) => {
   logger.info({ signal }, 'Shutdown signal received');
-  
+
   const closeRepoAndExit = () => {
     if (repo && typeof repo === 'object' && 'destroy' in repo && typeof (repo as any).destroy === 'function') {
       (repo as any).destroy();
