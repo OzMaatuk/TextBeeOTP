@@ -51,6 +51,22 @@ export function createServer(): ServerInstance {
     createCorsMiddleware({ allowedOrigins: securityConfig.allowedOrigins, allowAll: securityConfig.allowAllOrigins })
   );
 
+  // Unauthenticated lightweight endpoints — must be registered BEFORE auth middleware
+  // so AppSail's startup health probe gets a fast 200 without needing an API key.
+  apiApp.get('/', (_req, res) => res.status(200).send('ok'));
+  apiApp.get('/health', (_req: express.Request, res: express.Response) => {
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      environment: config.nodeEnv,
+      oidcEnabled: config.enableOidc,
+      authMethods: {
+        otp: 'Available at /otp/send and /otp/verify',
+        oidc: config.enableOidc ? 'Available at /.well-known/openid-configuration' : 'Disabled',
+      },
+    });
+  });
+
   // Mount UI router before auth middleware so browser users don't need an API key.
   // UI pages (/login, /verify) are at root. UI proxy OTP routes are at /ui/otp/*.
   const { pagesRouter, proxyRouter } = createUiRouter({ otpService, repo, providers });
@@ -113,19 +129,6 @@ export function createServer(): ServerInstance {
       }
     })();
   }
-
-  apiApp.get('/health', (_req: express.Request, res: express.Response) => {
-    res.json({
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      environment: config.nodeEnv,
-      oidcEnabled: config.enableOidc,
-      authMethods: {
-        otp: 'Available at /otp/send and /otp/verify',
-        oidc: config.enableOidc ? 'Available at /.well-known/openid-configuration' : 'Disabled',
-      },
-    });
-  });
 
   apiApp.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     req.log.error({ err }, 'Unhandled request error');

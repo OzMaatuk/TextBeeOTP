@@ -32,11 +32,11 @@ function readOtpSecret(): string {
 
 export const config = {
   get apiPort() {
-    const val = Number(process.env.API_PORT || process.env.PORT || process.env.X_ZOHO_CATALYST_LISTEN_PORT || 3008);
+    const val = Number(process.env.X_ZOHO_CATALYST_LISTEN_PORT || process.env.API_PORT || process.env.PORT || 3008);
     return validateNumber(val, 'API_PORT', 1, 65535);
   },
   get uiPort() {
-    const val = Number(process.env.UI_PORT || process.env.X_ZOHO_CATALYST_LISTEN_PORT || 8080);
+    const val = Number(process.env.X_ZOHO_CATALYST_LISTEN_PORT || process.env.UI_PORT || process.env.PORT || 3008);
     return validateNumber(val, 'UI_PORT', 1, 65535);
   },
   get nodeEnv() {
