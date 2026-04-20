@@ -126,4 +126,16 @@ export const config = {
     const raw = process.env.ENABLE_SMS_OTP || 'false';
     return /^(1|true|yes)$/i.test(raw);
   },
+  get apiKeys() {
+    return process.env.API_KEYS || undefined;
+  },
+  get allowedOrigins() {
+    return process.env.ALLOWED_ORIGINS || undefined;
+  },
+  get trustProxy() {
+    return process.env.TRUST_PROXY || undefined;
+  },
+  get healthApiKey() {
+    return process.env.HEALTH_API_KEY || undefined;
+  },
 };

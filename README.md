@@ -7,7 +7,9 @@ Lightweight verification microservice supporting both SMS (via TextBee) and Emai
 - **Browser-based Login UI**: Ready-to-use HTML forms for OTP authentication
 - **Multi-channel OTP**: SMS and Email support
 - **REST API**: Clean endpoints for sending and verifying OTPs
+- **Caller Authentication**: API key auth on all endpoints via `X-API-Key` header
 - **Rate limiting**: Built-in protection against abuse
+- **Environment-aware CORS**: Locked to allowed origins in production
 - **Flexible storage**: Redis or in-memory storage options
 - **Production hardened**: OTP hashing, layered rate limits, Docker support, comprehensive testing
 
@@ -29,7 +31,7 @@ Lightweight verification microservice supporting both SMS (via TextBee) and Emai
 3. Choose "Email or Phone" and enter your recipient
 4. Enter the 6-digit code you receive
 
-No additional setup needed!
+The browser UI calls `/ui/otp/send` and `/ui/otp/verify` — proxy routes that call the OTP service internally. No API key is needed in the browser. Backend callers use `/otp/send` and `/otp/verify` with an `X-API-Key` header.
 
 ### With Social Login (Google, Facebook, etc.)
 
@@ -60,17 +62,23 @@ For complete oauth2-proxy setup instructions, see [OIDC_INTEGRATION.md](OIDC_INT
 
 ## API Endpoints
 
-### UI Routes
-- `GET /login` - Login form (select email/SMS, enter recipient)
-- `GET /verify` - Verification form (enter 6-digit code)
+All `/otp/*` and `/health` endpoints require an `X-API-Key` header. UI routes do not. See [API Authentication](docs/API_AUTHENTICATION.md) for setup and examples.
 
-### OTP API
-- `POST /otp/send` - Send OTP via SMS or Email
-- `POST /otp/verify` - Verify OTP code
+### UI Routes (no auth required — browser facing)
+- `GET /login` - Login form
+- `GET /verify` - Verification form
+- `POST /ui/otp/send` - Send OTP (used by browser UI internally)
+- `POST /ui/otp/verify` - Verify OTP (used by browser UI internally)
+
+### API Routes (X-API-Key required — backend callers)
+- `POST /otp/send` - Send OTP
+- `POST /otp/verify` - Verify OTP
+- `GET /health` - Service health status
+- `GET /otp/health` - OTP subsystem health
 
 ## Environment Variables
 
-Create a `.env` file with the following variables:
+Create a `.env` file (copy from `.env.example`):
 
 ```bash
 # OTP Settings
@@ -78,19 +86,23 @@ OTP_TTL_SECONDS=300
 OTP_LENGTH=6
 OTP_SECRET=replace-with-a-long-random-secret
 
+# Caller Authentication (required in production)
+API_KEYS=your-api-key-here,optional-second-key
+HEALTH_API_KEY=your-health-monitor-key   # optional, health endpoints only
+
+# CORS (required in production)
+ALLOWED_ORIGINS=https://your-frontend.com
+
+# Proxy trust (required in production)
+TRUST_PROXY=1
+
 # Rate Limiting
 RATE_LIMIT_WINDOW_MS=60000
 RATE_LIMIT_MAX=5
 VERIFY_RATE_LIMIT_MAX=10
 
-# Request Limits
-JSON_BODY_LIMIT=8kb
-
 # Redis (optional - falls back to in-memory if not set)
-# For Redis Cloud (redis.io): use rediss:// protocol for TLS
 REDIS_URL=rediss://default:password@redis-12345.redis.io:12345
-# For local Redis without TLS:
-# REDIS_URL=redis://localhost:6379
 
 # SMS Provider (TextBee)
 TEXTBEE_API_KEY=your_textbee_api_key_here
@@ -98,15 +110,15 @@ TEXTBEE_DEVICE_ID=your_textbee_device_id_here
 
 # Email Provider (Zoho SMTP)
 EMAIL_FROM=noreply@yourdomain.com
-# SMTP (Zoho)
 SMTP_HOST=smtp.zoho.com
 SMTP_PORT=465
 SMTP_SECURE=true
 SMTP_USER=your_zoho_address@yourdomain.com
 SMTP_PASS=your_zoho_app_password
 
-# Server Configuration
-PORT=3008
+# Server ports (same port works fine; separate ports give cleaner isolation)
+API_PORT=3008
+UI_PORT=3008
 NODE_ENV=development
 ```
 
@@ -166,9 +178,13 @@ npm test
 ## Production Notes
 
 - Set a strong `OTP_SECRET`. In production the service will refuse to start without it.
+- Set `API_KEYS` to one or more comma-separated secrets. The service refuses to start in production without it.
+- Set `ALLOWED_ORIGINS` to your frontend domain(s). Defaults to `*` in non-production.
+- Set `TRUST_PROXY` to match your infrastructure (e.g. `1` behind a single load balancer).
+- Same port for `API_PORT` and `UI_PORT` works fine — the UI proxy routes are mounted before the auth middleware so browsers are never blocked.
 - OTP values are stored as HMAC hashes, not plaintext.
 - `/api-docs` is disabled in production.
-- The Redis debug test endpoint has been removed from the production API surface.
+- API key values are never written to logs.
 
 ## Docker
 
@@ -187,17 +203,18 @@ Simply navigate to your running server:
 http://localhost:3008/login
 ```
 
-Fill out the form, receive a code, and verify it — no code needed!
+Fill out the form, receive a code, and verify it. The UI handles everything — no API key needed in the browser.
 
 ### Using the REST API
 
-If you prefer to call the API directly from your own application:
+If you prefer to call the API directly from your own application, all requests require an `X-API-Key` header. See [API Authentication](docs/API_AUTHENTICATION.md) for full details.
 
 #### Send OTP via SMS
 
 ```bash
 curl -X POST http://localhost:3008/otp/send \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key-here" \
   -d '{"recipient": "+1234567890", "channel": "sms"}'
 ```
 
@@ -206,6 +223,7 @@ curl -X POST http://localhost:3008/otp/send \
 ```bash
 curl -X POST http://localhost:3008/otp/send \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key-here" \
   -d '{"recipient": "user@example.com", "channel": "email"}'
 ```
 
@@ -214,7 +232,15 @@ curl -X POST http://localhost:3008/otp/send \
 ```bash
 curl -X POST http://localhost:3008/otp/verify \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key-here" \
   -d '{"recipient": "user@example.com", "code": "123456"}'
+```
+
+#### Check health
+
+```bash
+curl http://localhost:3008/health \
+  -H "X-API-Key: your-api-key-here"
 ```
 
 ### Using helper script

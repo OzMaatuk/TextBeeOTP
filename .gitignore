@@ -49,3 +49,5 @@ certs/
 app-config.json
 .catalystrc
 catalyst.json
+
+.kiro/

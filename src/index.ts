@@ -37,7 +37,11 @@ if (config.nodeEnv !== 'production') {
 const isSamePort = apiPort === uiPort;
 
 if (isSamePort) {
-  apiApp.use(uiApp);
+  logger.warn(
+    { apiPort, uiPort },
+    'API_PORT and UI_PORT are the same. UI and API are served on a single port. ' +
+    'Use separate ports in production for proper security isolation.'
+  );
 }
 
 if (credentials) {

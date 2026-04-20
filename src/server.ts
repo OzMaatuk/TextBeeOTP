@@ -4,9 +4,10 @@ import swaggerUi from 'swagger-ui-express';
 import { createOtpRouter } from './routes/otp.js';
 import { createUiRouter } from './routes/ui.js';
 import { openApiSpec } from './openapi.js';
-import { createLogger } from './utils/logger.js';
 import { config } from './utils/config.js';
 import { createOtpService } from './bootstrap.js';
+import { createCorsMiddleware } from './middleware/corsPolicy.js';
+import { createApiKeyAuth } from './middleware/apiKeyAuth.js';
 import { IOtpRepository } from './repositories/otpRepository';
 
 export interface ServerInstance {
@@ -16,25 +17,24 @@ export interface ServerInstance {
 }
 
 export function createServer(): ServerInstance {
+  const { otpService, repo, providers, logger, securityConfig } = createOtpService();
+
   const apiApp = express();
-  apiApp.set('trust proxy', 1);
+  apiApp.set('trust proxy', securityConfig.trustProxy);
 
   apiApp.use(helmet());
   apiApp.use(express.json({ limit: config.jsonBodyLimit }));
   apiApp.use(express.urlencoded({ extended: false, limit: config.jsonBodyLimit }));
 
-  // Add basic CORS rules to allow the separate UI app to make cross-origin API calls locally
-  apiApp.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
-    // Note: In production you should restrict this to your actual UI domain
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    if (req.method === 'OPTIONS') {
-      res.sendStatus(200);
-      return;
-    }
-    next();
-  });
+  apiApp.use(createCorsMiddleware({ allowedOrigins: securityConfig.allowedOrigins, allowAll: securityConfig.allowAllOrigins }));
+
+  // Mount UI router before auth middleware so browser users don't need an API key.
+  // UI pages (/login, /verify) are at root. UI proxy OTP routes are at /ui/otp/*.
+  const { pagesRouter, proxyRouter } = createUiRouter({ otpService, repo, providers });
+  apiApp.use('/', pagesRouter);
+  apiApp.use('/ui', proxyRouter);
+
+  apiApp.use(createApiKeyAuth({ keys: securityConfig.apiKeys, healthKeys: securityConfig.healthApiKey ? [securityConfig.healthApiKey] : [], logger }));
 
   // OpenAPI documentation
   if (config.exposeDocs) {
@@ -42,8 +42,6 @@ export function createServer(): ServerInstance {
     apiApp.get('/api-docs', swaggerUi.setup(openApiSpec));
   }
 
-  const logger = createLogger();
-  const { otpService, repo, providers } = createOtpService();
   apiApp.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
     req.log = logger;
     next();
@@ -52,16 +50,18 @@ export function createServer(): ServerInstance {
   // OTP endpoints - standalone authentication via /otp/send and /otp/verify
   apiApp.use('/otp', createOtpRouter({ otpService, repo, providers }));
 
-  // Create separate UI Application
+  // Create separate UI Application (used when UI_PORT != API_PORT)
   const uiApp = express();
   uiApp.set('trust proxy', 1);
   uiApp.use(helmet());
+  uiApp.use(express.json({ limit: config.jsonBodyLimit }));
+  uiApp.use(express.urlencoded({ extended: false, limit: config.jsonBodyLimit }));
   uiApp.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
     req.log = logger;
     next();
   });
-  // UI routes for OTP login and verification
-  uiApp.use('/', createUiRouter());
+  uiApp.use('/', pagesRouter);
+  uiApp.use('/ui', proxyRouter);
 
   // Setup OIDC provider (only if enabled and not in test mode)
   // OIDC is for external authentication (Google, Facebook, etc.) via oauth2-proxy

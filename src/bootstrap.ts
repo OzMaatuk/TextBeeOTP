@@ -6,9 +6,18 @@ import { TextBeeAdapter } from './providers/textbeeAdapter.js';
 import { IOtpProvider, OtpChannel } from './providers/otpProvider.js';
 import { config } from './utils/config.js';
 import { createLogger } from './utils/logger.js';
+import { loadSecurityConfig, SecurityConfig } from './utils/securityConfig.js';
 
 export function createOtpService() {
   const logger = createLogger();
+
+  let securityConfig: SecurityConfig;
+  try {
+    securityConfig = loadSecurityConfig(logger);
+  } catch (err) {
+    logger.fatal({ err }, 'Security configuration error');
+    process.exit(1);
+  }
   const repo = config.redisUrl ? new RedisOtpRepository(config.redisUrl, logger) : new InMemoryOtpRepository();
 
   if (config.redisUrl) {
@@ -57,5 +66,6 @@ export function createOtpService() {
     repo,
     providers,
     otpService: new OtpService(repo, providers),
+    securityConfig,
   };
 }
