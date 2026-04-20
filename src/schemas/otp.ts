@@ -2,8 +2,7 @@ import { z } from 'zod';
 import { config } from '../utils/config.js';
 
 // Allowed channels depend on runtime config
-const allowedChannels = () =>
-  config.enableSmsOtp ? (['email', 'sms'] as const) : (['email'] as const);
+const allowedChannels = () => (config.enableSmsOtp ? (['email', 'sms'] as const) : (['email'] as const));
 
 export const sendSchema = z
   .object({

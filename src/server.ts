@@ -47,7 +47,9 @@ export function createServer(): ServerInstance {
   apiApp.use(express.json({ limit: config.jsonBodyLimit }));
   apiApp.use(express.urlencoded({ extended: false, limit: config.jsonBodyLimit }));
 
-  apiApp.use(createCorsMiddleware({ allowedOrigins: securityConfig.allowedOrigins, allowAll: securityConfig.allowAllOrigins }));
+  apiApp.use(
+    createCorsMiddleware({ allowedOrigins: securityConfig.allowedOrigins, allowAll: securityConfig.allowAllOrigins })
+  );
 
   // Mount UI router before auth middleware so browser users don't need an API key.
   // UI pages (/login, /verify) are at root. UI proxy OTP routes are at /ui/otp/*.
@@ -55,7 +57,13 @@ export function createServer(): ServerInstance {
   apiApp.use('/', pagesRouter);
   apiApp.use('/ui', proxyRouter);
 
-  apiApp.use(createApiKeyAuth({ keys: securityConfig.apiKeys, healthKeys: securityConfig.healthApiKey ? [securityConfig.healthApiKey] : [], logger }));
+  apiApp.use(
+    createApiKeyAuth({
+      keys: securityConfig.apiKeys,
+      healthKeys: securityConfig.healthApiKey ? [securityConfig.healthApiKey] : [],
+      logger,
+    })
+  );
 
   // OpenAPI documentation
   if (config.exposeDocs) {
@@ -77,6 +85,9 @@ export function createServer(): ServerInstance {
   uiApp.use(helmetWithNonce());
   uiApp.use(express.json({ limit: config.jsonBodyLimit }));
   uiApp.use(express.urlencoded({ extended: false, limit: config.jsonBodyLimit }));
+  uiApp.use(
+    createCorsMiddleware({ allowedOrigins: securityConfig.allowedOrigins, allowAll: securityConfig.allowAllOrigins })
+  );
   uiApp.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
     req.log = logger;
     next();

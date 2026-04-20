@@ -82,11 +82,14 @@ export function loadSecurityConfig(logger: Logger): SecurityConfig {
   }
 
   // Startup summary — never log key values
-  logger.info({
-    allowedOrigins,
-    trustProxy,
-    apiKeyCount: apiKeys.length,
-  }, 'Security configuration loaded');
+  logger.info(
+    {
+      allowedOrigins,
+      trustProxy,
+      apiKeyCount: apiKeys.length,
+    },
+    'Security configuration loaded'
+  );
 
   return {
     apiKeys,

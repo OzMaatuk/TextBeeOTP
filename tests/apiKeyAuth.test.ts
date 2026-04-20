@@ -1,5 +1,5 @@
 import { createApiKeyAuth } from '../src/middleware/apiKeyAuth';
-import type { Request, Response, NextFunction } from 'express';
+import type { Request, Response } from 'express';
 import type { KeyStoreEntry } from '../src/utils/securityConfig';
 
 // --- Helpers ---
@@ -78,7 +78,7 @@ describe('createApiKeyAuth', () => {
 
       expect(logger.warn).toHaveBeenCalledWith(
         expect.objectContaining({ path: '/otp/send', method: 'POST', ip: '1.2.3.4', reason: 'missing_key' }),
-        'auth_failure',
+        'auth_failure'
       );
     });
   });
@@ -105,10 +105,7 @@ describe('createApiKeyAuth', () => {
 
       middleware(req, res, makeMockNext());
 
-      expect(logger.warn).toHaveBeenCalledWith(
-        expect.objectContaining({ reason: 'invalid_key' }),
-        'auth_failure',
-      );
+      expect(logger.warn).toHaveBeenCalledWith(expect.objectContaining({ reason: 'invalid_key' }), 'auth_failure');
     });
   });
 
@@ -145,7 +142,7 @@ describe('createApiKeyAuth', () => {
 
       expect(logger.debug).toHaveBeenCalledWith(
         expect.objectContaining({ path: '/otp/send', keyName: 'key-1' }),
-        'auth_success',
+        'auth_success'
       );
       const [logObj] = logger.debug.mock.calls[0];
       expect(JSON.stringify(logObj)).not.toContain(VALID_KEY);

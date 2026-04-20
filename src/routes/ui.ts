@@ -26,6 +26,7 @@ type UiRouterDeps = {
 
 export function createUiRouter({ otpService, providers }: UiRouterDeps): { pagesRouter: Router; proxyRouter: Router } {
   const pagesRouter = Router();
+  void providers;
 
   // Redirect root to login page
   pagesRouter.get('/', (_req: Request, res: Response) => {
@@ -73,10 +74,7 @@ export function createUiRouter({ otpService, providers }: UiRouterDeps): { pages
     }
 
     const nonce = res.locals.cspNonce ? ` nonce="${res.locals.cspNonce}"` : '';
-    const html = cachedVerifyHtml.replace(
-      '</head>',
-      `<script${nonce}>window.API_BASE_URL = '/ui';</script></head>`,
-    );
+    const html = cachedVerifyHtml.replace('</head>', `<script${nonce}>window.API_BASE_URL = '/ui';</script></head>`);
 
     res.setHeader('Content-Type', 'text/html');
     res.send(html);

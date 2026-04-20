@@ -31,10 +31,7 @@ describe('createServer', () => {
     process.env.API_KEYS = 'test-server-key';
 
     const { apiApp } = createServer();
-    const response = await request(apiApp)
-      .get('/health')
-      .set('X-API-Key', 'test-server-key')
-      .expect(200);
+    const response = await request(apiApp).get('/health').set('X-API-Key', 'test-server-key').expect(200);
 
     expect(response.body.status).toBe('ok');
     expect(response.body.environment).toBe('test');
@@ -60,9 +57,6 @@ describe('createServer', () => {
     process.env.TRUST_PROXY = '1';
 
     const { apiApp } = createServer();
-    await request(apiApp)
-      .get('/api-docs')
-      .set('X-API-Key', 'test-server-key')
-      .expect(404);
+    await request(apiApp).get('/api-docs').set('X-API-Key', 'test-server-key').expect(404);
   });
 });

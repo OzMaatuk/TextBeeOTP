@@ -4,8 +4,7 @@ import { createLogger } from '../utils/logger.js';
 
 const logger = createLogger();
 
-// Polyfill for URL.parse - added in Node.js 19.4+
-// This allows oidc-provider to work with Node.js 18.x
+// Polyfill for URL.parse (Node.js <19.4)
 if (!URL.parse) {
   (URL as any).parse = function (url: string) {
     return new URL(url);
