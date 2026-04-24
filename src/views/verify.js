@@ -10,6 +10,13 @@ const recipientDisplay = document.getElementById('recipientDisplay');
 const verificationForm = document.getElementById('verificationForm');
 const verificationSuccess = document.getElementById('verificationSuccess');
 const tokenDisplay = document.getElementById('tokenDisplay');
+const signInAgainBtn = document.getElementById('signInAgainBtn');
+
+if (signInAgainBtn) {
+  signInAgainBtn.addEventListener('click', () => {
+    window.location.href = '/login';
+  });
+}
 
 // Retrieve recipient and channel from sessionStorage
 const recipient = sessionStorage.getItem('otpRecipient');
