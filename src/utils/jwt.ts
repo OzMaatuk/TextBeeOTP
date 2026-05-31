@@ -1,27 +1,31 @@
 import jwt from 'jsonwebtoken';
 import { config } from './config.js';
 
+export interface AuthTokenPayload {
+  email: string;
+  sub: string;
+  exp: number;
+  iat: number;
+}
+
 export function generateAuthToken(recipient: string): string {
   const secret = config.authTokenSecret;
   if (!secret) {
     throw new Error('AUTH_TOKEN_SECRET is not configured');
   }
-  
-  const payload = {
-    email: recipient,
-    sub: recipient, // Subject (unique identifier)
-    iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + config.authTokenTtlSeconds,
-  };
-  
-  return jwt.sign(payload, secret, { expiresIn: config.authTokenTtlSeconds });
+
+  return jwt.sign(
+    { email: recipient, sub: recipient },
+    secret,
+    { expiresIn: config.authTokenTtlSeconds }
+  );
 }
 
-export function verifyAuthToken(token: string): any {
+export function verifyAuthToken(token: string): AuthTokenPayload {
   const secret = config.authTokenSecret;
   if (!secret) {
     throw new Error('AUTH_TOKEN_SECRET is not configured');
   }
-  
-  return jwt.verify(token, secret);
+
+  return jwt.verify(token, secret) as AuthTokenPayload;
 }

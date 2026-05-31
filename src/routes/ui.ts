@@ -7,6 +7,7 @@ import { OtpService } from '../services/otpService.js';
 import { IOtpRepository } from '../repositories/otpRepository.js';
 import { IOtpProvider, OtpChannel } from '../providers/otpProvider.js';
 import { sendSchema, verifySchema } from '../schemas/otp.js';
+import { generateAuthToken } from '../utils/jwt.js';
 
 // Use process.cwd() to find views directory relative to project root
 // This avoids import.meta.url issues in some test environments
@@ -57,7 +58,7 @@ export function createUiRouter({ otpService, providers }: UiRouterDeps): { pages
 
     // Add return URL parameter support
     const returnUrl = req.query.return as string;
-    injections += `<script${nonce}>window.RETURN_URL = '${returnUrl || ''}';</script>`;
+    injections += `<script${nonce}>window.RETURN_URL = ${JSON.stringify(returnUrl || '')};</script>`;
 
     if (!config.enableOidc) {
       injections += '<style>.method-social, .divider { display: none !important; }</style>';

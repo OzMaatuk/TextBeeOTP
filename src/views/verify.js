@@ -107,8 +107,25 @@ form.addEventListener('submit', async (e) => {
     if (data.token) {
       const returnUrl = window.RETURN_URL;
       if (returnUrl) {
-        // Redirect to third-party app with token
-        window.location.href = `${returnUrl}?token=${data.token}&email=${recipient}`;
+        // POST the token to the return URL via a hidden auto-submitting form.
+        // This keeps the token out of the browser history, server logs, and Referer headers.
+        const f = document.createElement('form');
+        f.method = 'POST';
+        f.action = returnUrl;
+
+        const addField = (name, value) => {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = name;
+          input.value = value;
+          f.appendChild(input);
+        };
+
+        addField('token', data.token);
+        addField('email', data.email || recipient);
+
+        document.body.appendChild(f);
+        f.submit();
       } else {
         tokenDisplay.textContent = `Token: ${data.token}`;
       }

@@ -97,7 +97,7 @@ export function createServer(): ServerInstance {
   apiApp.use('/otp', createOtpRouter({ otpService, repo, providers }));
 
   // API routes for third-party integration
-  apiApp.use('/api', createApiRouter({}));
+  apiApp.use('/api', createApiRouter({ keys: securityConfig.apiKeys, healthKeys: securityConfig.healthApiKey ? [securityConfig.healthApiKey] : [], logger }));
 
   // Create separate UI Application (used when UI_PORT != API_PORT)
   const uiApp = express();

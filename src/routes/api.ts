@@ -1,24 +1,22 @@
 import { Router, Request, Response } from 'express';
+import type { Logger } from 'pino';
 import { createApiKeyAuth } from '../middleware/apiKeyAuth.js';
-import { config } from '../utils/config.js';
 import { verifyAuthToken } from '../utils/jwt.js';
+import type { KeyStoreEntry } from '../utils/securityConfig.js';
 
 type ApiRouterDeps = {
-  // Add any dependencies if needed
+  keys: KeyStoreEntry[];
+  healthKeys?: KeyStoreEntry[];
+  logger: Logger;
 };
 
-export function createApiRouter({}: ApiRouterDeps): Router {
+export function createApiRouter({ keys, healthKeys = [], logger }: ApiRouterDeps): Router {
   const router = Router();
-  
-  // Middleware for API key authentication
-  router.use(createApiKeyAuth({
-    keys: config.apiKeys ? config.apiKeys.split(',') : [],
-    healthKeys: config.healthApiKey ? [config.healthApiKey] : [],
-    logger: console
-  }));
+
+  router.use(createApiKeyAuth({ keys, healthKeys, logger }));
 
   // Token validation endpoint for third-party apps
-  router.get('/api/auth/validate', (req: Request, res: Response) => {
+  router.get('/auth/validate', (req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
       return res.status(401).json({ error: 'missing_token' });
@@ -35,9 +33,9 @@ export function createApiRouter({}: ApiRouterDeps): Router {
         valid: true,
         email: decoded.email,
         sub: decoded.sub,
-        exp: decoded.exp
+        exp: decoded.exp,
       });
-    } catch (err) {
+    } catch (_err) {
       return res.status(401).json({ error: 'invalid_token' });
     }
   });
