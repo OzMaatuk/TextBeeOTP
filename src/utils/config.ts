@@ -138,4 +138,11 @@ export const config = {
   get healthApiKey() {
     return process.env.HEALTH_API_KEY || undefined;
   },
+  get authTokenSecret() {
+    return validateString(process.env.AUTH_TOKEN_SECRET, 'AUTH_TOKEN_SECRET');
+  },
+  get authTokenTtlSeconds() {
+    const val = Number(process.env.AUTH_TOKEN_TTL_SECONDS || 300);
+    return validateNumber(val, 'AUTH_TOKEN_TTL_SECONDS', 60, 3600);
+  },
 };

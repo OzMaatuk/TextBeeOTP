@@ -38,7 +38,7 @@ export function createUiRouter({ otpService, providers }: UiRouterDeps): { pages
 
   let cachedLoginHtml: string | null = null;
 
-  pagesRouter.get('/login', async (_req: Request, res: Response) => {
+  pagesRouter.get('/login', async (req: Request, res: Response) => {
     if (!cachedLoginHtml) {
       const filePath = path.join(_viewsDir, 'login.html');
       cachedLoginHtml = await fs.readFile(filePath, 'utf-8');
@@ -54,6 +54,10 @@ export function createUiRouter({ otpService, providers }: UiRouterDeps): { pages
 
     // Expose SMS OTP feature flag to the frontend
     injections += `<script${nonce}>window.SMS_OTP_ENABLED = ${config.enableSmsOtp};</script>`;
+
+    // Add return URL parameter support
+    const returnUrl = req.query.return as string;
+    injections += `<script${nonce}>window.RETURN_URL = '${returnUrl || ''}';</script>`;
 
     if (!config.enableOidc) {
       injections += '<style>.method-social, .divider { display: none !important; }</style>';
@@ -126,7 +130,14 @@ export function createUiRouter({ otpService, providers }: UiRouterDeps): { pages
     try {
       const ok = await otpService.verifyOTP(recipient, code);
       if (!ok) return res.status(400).json({ error: 'invalid_code' });
-      return res.status(200).json({ status: 'verified' });
+      
+      // Generate a short-lived token for third-party integration
+      const token = generateAuthToken(recipient);
+      return res.status(200).json({ 
+        status: 'verified',
+        token,
+        email: recipient 
+      });
     } catch (err: unknown) {
       req.log?.error({ err, recipient }, 'UI proxy: error verifying OTP');
       if (err instanceof Error && (err.message.includes('Invalid') || err.message.includes('invalid'))) {

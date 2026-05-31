@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import swaggerUi from 'swagger-ui-express';
 import { createOtpRouter } from './routes/otp.js';
 import { createUiRouter } from './routes/ui.js';
+import { createApiRouter } from './routes/api.js';
 import { openApiSpec } from './openapi.js';
 import { config } from './utils/config.js';
 import { createOtpService } from './bootstrap.js';
@@ -94,6 +95,9 @@ export function createServer(): ServerInstance {
 
   // OTP endpoints - standalone authentication via /otp/send and /otp/verify
   apiApp.use('/otp', createOtpRouter({ otpService, repo, providers }));
+
+  // API routes for third-party integration
+  apiApp.use('/api', createApiRouter({}));
 
   // Create separate UI Application (used when UI_PORT != API_PORT)
   const uiApp = express();

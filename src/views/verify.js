@@ -105,7 +105,13 @@ form.addEventListener('submit', async (e) => {
     verificationSuccess.style.display = 'block';
     
     if (data.token) {
-      tokenDisplay.textContent = `Token: ${data.token}`;
+      const returnUrl = window.RETURN_URL;
+      if (returnUrl) {
+        // Redirect to third-party app with token
+        window.location.href = `${returnUrl}?token=${data.token}&email=${recipient}`;
+      } else {
+        tokenDisplay.textContent = `Token: ${data.token}`;
+      }
     } else {
       tokenDisplay.textContent = 'Verification complete. You can now proceed.';
     }
