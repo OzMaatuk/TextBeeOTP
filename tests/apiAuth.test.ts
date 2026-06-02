@@ -36,6 +36,21 @@ describe('GET /api/auth/validate', () => {
     expect(res.body.error).toBe('invalid_token');
   });
 
+  it('accepts lowercase bearer authorization headers', async () => {
+    const { generateAuthToken } = await import('../src/utils/jwt');
+    const token = generateAuthToken('user@example.com');
+
+    const { apiApp } = createServer();
+    const res = await request(apiApp)
+      .get('/api/auth/validate')
+      .set('X-API-Key', API_KEY)
+      .set('Authorization', `bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.valid).toBe(true);
+    expect(res.body.email).toBe('user@example.com');
+  });
+
   it('returns 401 without API key', async () => {
     const { apiApp } = createServer();
     const res = await request(apiApp).get('/api/auth/validate').set('Authorization', 'Bearer sometoken');

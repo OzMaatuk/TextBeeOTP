@@ -167,12 +167,7 @@ export function createUiRouter({ otpService, providers }: UiRouterDeps): { pages
     try {
       // Generate the token BEFORE consuming the OTP, so a token-generation
       // failure does not leave the user with a deleted OTP and no success response.
-      let token: string | undefined;
-      try {
-        token = generateAuthToken(recipient);
-      } catch (tokenErr: unknown) {
-        req.log?.warn({ err: tokenErr, recipient }, 'AUTH_TOKEN_SECRET not configured; skipping auth token');
-      }
+      const token = generateAuthToken(recipient);
 
       const ok = await otpService.verifyOTP(recipient, code);
       if (!ok) return res.status(400).json({ error: 'invalid_code' });
@@ -180,7 +175,7 @@ export function createUiRouter({ otpService, providers }: UiRouterDeps): { pages
       return res.status(200).json({
         status: 'verified',
         email: recipient,
-        ...(token !== undefined ? { token } : {}),
+        token,
       });
     } catch (err: unknown) {
       req.log?.error({ err, recipient }, 'UI proxy: error verifying OTP');
