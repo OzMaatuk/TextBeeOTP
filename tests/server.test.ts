@@ -59,4 +59,25 @@ describe('createServer', () => {
     const { apiApp } = createServer();
     await request(apiApp).get('/api-docs').set('X-API-Key', 'test-server-key').expect(404);
   });
+
+  it('includes callback origin in CSP form-action for /verify', async () => {
+    process.env.NODE_ENV = 'test';
+    process.env.API_KEYS = 'test-server-key';
+
+    const { apiApp } = createServer();
+    const callbackUrl = 'https://192.168.0.100/api/otp-callback?return=%2F';
+    const response = await request(apiApp)
+      .get(`/verify?return=${encodeURIComponent(callbackUrl)}`)
+      .expect(200);
+
+    expect(response.headers['content-security-policy']).toMatch(
+      /form-action\s+'self'\s+https:\/\/192\.168\.0\.100/
+    );
+    expect(response.text).toContain(
+      `<meta http-equiv="Content-Security-Policy" content="form-action 'self' https://192.168.0.100">`
+    );
+    expect(response.text).toContain(
+      `window.RETURN_URL = ${JSON.stringify(callbackUrl)}`
+    );
+  });
 });

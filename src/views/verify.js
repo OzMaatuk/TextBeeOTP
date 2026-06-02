@@ -21,6 +21,7 @@ if (signInAgainBtn) {
 // Retrieve recipient and channel from sessionStorage
 const recipient = sessionStorage.getItem('otpRecipient');
 const channel = sessionStorage.getItem('otpChannel');
+const returnUrl = window.RETURN_URL || sessionStorage.getItem('otpReturnUrl') || '';
 
 if (!recipient) {
   window.location.href = '/login';
@@ -92,7 +93,8 @@ form.addEventListener('submit', async (e) => {
     const data = await response.json();
 
     if (!response.ok) {
-      const errorMsg = data.error === 'invalid_code' ? 'Invalid code. Check and try again.' : (data.error || 'Verification failed');
+      const errorMsg =
+        data.error === 'invalid_code' ? 'Invalid code. Check and try again.' : data.error || 'Verification failed';
       showError(errorMsg);
       submitBtn.style.display = 'block';
       form.style.opacity = '1';
@@ -103,9 +105,8 @@ form.addEventListener('submit', async (e) => {
     clearInterval(timerInterval);
     verificationForm.style.display = 'none';
     verificationSuccess.style.display = 'block';
-    
+
     if (data.token) {
-      const returnUrl = window.RETURN_URL;
       if (returnUrl) {
         // POST the token to the return URL via a hidden auto-submitting form.
         // This keeps the token out of the browser history, server logs, and Referer headers.
@@ -135,6 +136,7 @@ form.addEventListener('submit', async (e) => {
 
     sessionStorage.removeItem('otpRecipient');
     sessionStorage.removeItem('otpChannel');
+    sessionStorage.removeItem('otpReturnUrl');
   } catch (err) {
     showError('Network error. Please try again.');
     submitBtn.style.display = 'block';

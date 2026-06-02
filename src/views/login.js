@@ -1,5 +1,5 @@
 // OAuth2-proxy configuration
-const OAUTH2_PROXY_URL = (function() {
+const OAUTH2_PROXY_URL = (function () {
   const protocol = window.location.protocol;
   const hostname = window.location.hostname;
   const isDev = hostname === 'localhost' || hostname === '127.0.0.1';
@@ -78,7 +78,7 @@ if (smsChannel) {
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
-  
+
   const channel = document.querySelector('input[name="channel"]:checked').value;
   const recipient = recipientInput.value.trim();
 
@@ -124,7 +124,13 @@ form.addEventListener('submit', async (e) => {
 
     sessionStorage.setItem('otpRecipient', recipient);
     sessionStorage.setItem('otpChannel', channel);
-    window.location.href = '/verify';
+    if (window.RETURN_URL) {
+      sessionStorage.setItem('otpReturnUrl', window.RETURN_URL);
+    } else {
+      sessionStorage.removeItem('otpReturnUrl');
+    }
+    const verifyUrl = window.RETURN_URL ? `/verify?return=${encodeURIComponent(window.RETURN_URL)}` : '/verify';
+    window.location.href = verifyUrl;
   } catch (err) {
     showError('Network error. Please try again.');
     submitBtn.style.display = 'block';

@@ -72,14 +72,47 @@ export function createUiRouter({ otpService, providers }: UiRouterDeps): { pages
 
   let cachedVerifyHtml: string | null = null;
 
-  pagesRouter.get('/verify', async (_req: Request, res: Response) => {
+  pagesRouter.get('/verify', async (req: Request, res: Response) => {
     if (!cachedVerifyHtml) {
       const filePath = path.join(_viewsDir, 'verify.html');
       cachedVerifyHtml = await fs.readFile(filePath, 'utf-8');
     }
 
+    const returnUrl = req.query.return as string;
     const nonce = res.locals.cspNonce ? ` nonce="${res.locals.cspNonce}"` : '';
-    const html = cachedVerifyHtml.replace('</head>', `<script${nonce}>window.API_BASE_URL = '/ui';</script></head>`);
+    let html = cachedVerifyHtml;
+    let metaCsp = '';
+
+    if (returnUrl) {
+      try {
+        const returnOrigin = new URL(returnUrl).origin;
+        const currentCsp = res.getHeader('Content-Security-Policy');
+        let cspString = '';
+
+        if (typeof currentCsp === 'string') {
+          cspString = currentCsp;
+        } else if (Array.isArray(currentCsp)) {
+          cspString = currentCsp.join('; ');
+        }
+
+        if (cspString.length > 0) {
+          if (cspString.includes('form-action')) {
+            cspString = cspString.replace(/form-action\s+[^;]+/, (match) => {
+              return match.includes(returnOrigin) ? match : `${match} ${returnOrigin}`;
+            });
+          } else {
+            cspString = `${cspString}; form-action 'self' ${returnOrigin}`;
+          }
+          res.setHeader('Content-Security-Policy', cspString);
+        }
+
+        metaCsp = `<meta http-equiv="Content-Security-Policy" content="form-action 'self' ${returnOrigin}">`;
+      } catch {
+        // Ignore invalid return URL; fallback to default CSP
+      }
+    }
+
+    html = html.replace('</head>', `${metaCsp}<script${nonce}>window.API_BASE_URL = '/ui'; window.RETURN_URL = ${JSON.stringify(returnUrl || '')};</script></head>`);
 
     res.setHeader('Content-Type', 'text/html');
     res.send(html);
