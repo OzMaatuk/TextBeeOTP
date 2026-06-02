@@ -2,13 +2,13 @@ declare module 'oidc-provider' {
   import { Request, Response, NextFunction } from 'express';
 
   interface ProviderConfig {
-    clients?: any[];
+    clients?: Array<Record<string, unknown>>;
     claims?: Record<string, string[]>;
     scopes?: string[];
-    features?: Record<string, any>;
+    features?: Record<string, unknown>;
     ttl?: Record<string, number>;
-    interactions?: Record<string, any>;
-    findById?: (ctx: any, id: string) => Promise<any>;
+    interactions?: Record<string, unknown>;
+    findById?: (ctx: unknown, id: string) => Promise<unknown>;
   }
 
   class Provider {
@@ -17,8 +17,8 @@ declare module 'oidc-provider' {
     authorization(req: Request, res: Response, next?: NextFunction): Promise<void>;
     token(req: Request, res: Response, next?: NextFunction): Promise<void>;
     userinfo(req: Request, res: Response, next?: NextFunction): Promise<void>;
-    interactionDetails(req: Request, res: Response): Promise<any>;
-    interactionFinished(req: Request, res: Response, result: any): Promise<void>;
+    interactionDetails(req: Request, res: Response): Promise<unknown>;
+    interactionFinished(req: Request, res: Response, result: unknown): Promise<void>;
   }
 
   export default Provider;

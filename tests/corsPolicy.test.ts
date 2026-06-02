@@ -1,10 +1,10 @@
 import { createCorsMiddleware } from '../src/middleware/corsPolicy';
 import type { Request, Response, NextFunction } from 'express';
 
-function makeMockReq(overrides: Partial<Request> = {}): Request {
+function makeMockReq(overrides: Partial<Request> & { headers?: Record<string, string> } = {}): Request {
   return {
     method: 'GET',
-    headers: {},
+    headers: {} as Record<string, string>,
     ...overrides,
   } as unknown as Request;
 }
@@ -43,7 +43,7 @@ describe('createCorsMiddleware', () => {
   describe('wildcard mode (allowAll: true)', () => {
     it('sets Access-Control-Allow-Origin: * on all requests', () => {
       const middleware = createCorsMiddleware({ allowedOrigins: [], allowAll: true });
-      const req = makeMockReq({ headers: { origin: 'https://any-origin.com' } } as any);
+      const req = makeMockReq({ headers: { origin: 'https://any-origin.com' } });
       const res = makeMockRes();
       const next = makeMockNext();
 
@@ -66,7 +66,7 @@ describe('createCorsMiddleware', () => {
 
     it('handles OPTIONS preflight with 204 and allow headers in wildcard mode', () => {
       const middleware = createCorsMiddleware({ allowedOrigins: [], allowAll: true });
-      const req = makeMockReq({ method: 'OPTIONS', headers: { origin: 'https://any.com' } } as any);
+      const req = makeMockReq({ method: 'OPTIONS', headers: { origin: 'https://any.com' } });
       const res = makeMockRes();
       const next = makeMockNext();
 
@@ -84,7 +84,7 @@ describe('createCorsMiddleware', () => {
     it('echoes the matched origin in Access-Control-Allow-Origin', () => {
       const allowedOrigin = 'https://app.example.com';
       const middleware = createCorsMiddleware({ allowedOrigins: [allowedOrigin] });
-      const req = makeMockReq({ headers: { origin: allowedOrigin } } as any);
+      const req = makeMockReq({ headers: { origin: allowedOrigin } });
       const res = makeMockRes();
       const next = makeMockNext();
 
@@ -97,7 +97,7 @@ describe('createCorsMiddleware', () => {
     it('echoes the correct origin when multiple origins are configured', () => {
       const origins = ['https://app1.example.com', 'https://app2.example.com'];
       const middleware = createCorsMiddleware({ allowedOrigins: origins });
-      const req = makeMockReq({ headers: { origin: origins[1] } } as any);
+      const req = makeMockReq({ headers: { origin: origins[1] } });
       const res = makeMockRes();
       const next = makeMockNext();
 
@@ -110,7 +110,7 @@ describe('createCorsMiddleware', () => {
   describe('unmatched origin', () => {
     it('omits Access-Control-Allow-Origin header for unmatched origin', () => {
       const middleware = createCorsMiddleware({ allowedOrigins: ['https://allowed.com'] });
-      const req = makeMockReq({ headers: { origin: 'https://evil.com' } } as any);
+      const req = makeMockReq({ headers: { origin: 'https://evil.com' } });
       const res = makeMockRes();
       const next = makeMockNext();
 
@@ -134,7 +134,7 @@ describe('createCorsMiddleware', () => {
 
     it('omits Access-Control-Allow-Origin when allowedOrigins is empty', () => {
       const middleware = createCorsMiddleware({ allowedOrigins: [] });
-      const req = makeMockReq({ headers: { origin: 'https://any.com' } } as any);
+      const req = makeMockReq({ headers: { origin: 'https://any.com' } });
       const res = makeMockRes();
       const next = makeMockNext();
 
@@ -148,7 +148,7 @@ describe('createCorsMiddleware', () => {
     it('responds 204 with Access-Control-Allow-Methods and Access-Control-Allow-Headers for matched origin', () => {
       const allowedOrigin = 'https://app.example.com';
       const middleware = createCorsMiddleware({ allowedOrigins: [allowedOrigin] });
-      const req = makeMockReq({ method: 'OPTIONS', headers: { origin: allowedOrigin } } as any);
+      const req = makeMockReq({ method: 'OPTIONS', headers: { origin: allowedOrigin } });
       const res = makeMockRes();
       const next = makeMockNext();
 
@@ -167,7 +167,7 @@ describe('createCorsMiddleware', () => {
 
     it('responds 204 without ACAO header for unmatched origin preflight', () => {
       const middleware = createCorsMiddleware({ allowedOrigins: ['https://allowed.com'] });
-      const req = makeMockReq({ method: 'OPTIONS', headers: { origin: 'https://evil.com' } } as any);
+      const req = makeMockReq({ method: 'OPTIONS', headers: { origin: 'https://evil.com' } });
       const res = makeMockRes();
       const next = makeMockNext();
 

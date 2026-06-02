@@ -19,9 +19,7 @@ afterEach(() => {
 describe('GET /api/auth/validate', () => {
   it('returns 401 when Authorization header is missing', async () => {
     const { apiApp } = createServer();
-    const res = await request(apiApp)
-      .get('/api/auth/validate')
-      .set('X-API-Key', API_KEY);
+    const res = await request(apiApp).get('/api/auth/validate').set('X-API-Key', API_KEY);
 
     expect(res.status).toBe(401);
     expect(res.body.error).toBe('missing_token');
@@ -40,9 +38,7 @@ describe('GET /api/auth/validate', () => {
 
   it('returns 401 without API key', async () => {
     const { apiApp } = createServer();
-    const res = await request(apiApp)
-      .get('/api/auth/validate')
-      .set('Authorization', 'Bearer sometoken');
+    const res = await request(apiApp).get('/api/auth/validate').set('Authorization', 'Bearer sometoken');
 
     expect(res.status).toBe(401);
   });

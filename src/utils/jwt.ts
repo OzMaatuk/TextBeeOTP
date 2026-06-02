@@ -14,11 +14,9 @@ export function generateAuthToken(recipient: string): string {
     throw new Error('AUTH_TOKEN_SECRET is not configured');
   }
 
-  return jwt.sign(
-    { email: recipient, sub: recipient },
-    secret,
-    { expiresIn: config.authTokenTtlSeconds }
-  );
+  return jwt.sign({ email: recipient, sub: recipient }, secret, {
+    expiresIn: config.authTokenTtlSeconds,
+  });
 }
 
 export function verifyAuthToken(token: string): AuthTokenPayload {

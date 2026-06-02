@@ -79,8 +79,10 @@ const shutdown = (signal: string) => {
   logger.info({ signal }, 'Shutdown signal received');
 
   const closeRepoAndExit = () => {
-    if (repo && typeof repo === 'object' && 'destroy' in repo && typeof (repo as any).destroy === 'function') {
-      (repo as any).destroy();
+    try {
+      repo.destroy();
+    } catch (err) {
+      logger.warn({ err }, 'Error shutting down repository');
     }
     logger.info('Servers closed');
     process.exit(0);

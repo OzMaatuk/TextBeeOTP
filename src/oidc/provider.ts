@@ -1,14 +1,16 @@
-import { Express } from 'express';
+import type { Express } from 'express';
+import type Provider from 'oidc-provider';
 import { config } from '../utils/config.js';
 import { createLogger } from '../utils/logger.js';
 
 const logger = createLogger();
 
 // Polyfill for URL.parse (Node.js <19.4)
-if (!URL.parse) {
-  (URL as any).parse = function (url: string) {
-    return new URL(url);
-  };
+type URLWithParse = typeof URL & { parse?: (url: string) => URL };
+const URLWithParse = URL as URLWithParse;
+
+if (!URLWithParse.parse) {
+  URLWithParse.parse = (url: string) => new URL(url);
 }
 
 // In-memory account storage for external identities
@@ -31,8 +33,8 @@ const externalAccounts = new Map<string, ExternalAccount>();
  *
  * For OTP-based authentication, use the /otp endpoints directly.
  */
-export async function createOidcProvider(app: Express): Promise<any> {
-  const { default: Provider } = await import('oidc-provider');
+export async function createOidcProvider(app: Express): Promise<Provider> {
+  const { default: Provider } = (await import('oidc-provider')) as { default: typeof Provider };
   const { v4: uuidv4 } = await import('uuid');
   const baseUrl = config.oidcServerUrl || `http://localhost:${config.apiPort}`;
   const clientId = config.oidcClientId || 'oauth2-proxy';
@@ -65,7 +67,7 @@ export async function createOidcProvider(app: Express): Promise<any> {
       RefreshToken: 7 * 24 * 3600, // 7 days
       Session: 7 * 24 * 3600,
     },
-    async findById(_ctx: any, id: string) {
+    async findById(_ctx: unknown, id: string) {
       const account = externalAccounts.get(id);
       if (!account) {
         return undefined;

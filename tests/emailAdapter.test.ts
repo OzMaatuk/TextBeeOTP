@@ -5,7 +5,7 @@ import nodemailer from 'nodemailer';
 jest.mock('nodemailer');
 
 describe('EmailAdapter', () => {
-  let mockTransport: any;
+  let mockTransport: { sendMail: jest.Mock<Promise<{ messageId: string }>, [unknown]> };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -101,7 +101,7 @@ describe('EmailAdapter', () => {
 
       await adapter.sendOtp('recipient@example.com', '654321');
 
-      const call = mockTransport.sendMail.mock.calls[0][0];
+      const call = mockTransport.sendMail.mock.calls[0][0] as { text: string; html: string };
       expect(call.text).toContain('654321');
       expect(call.html).toContain('654321');
     });
@@ -111,7 +111,7 @@ describe('EmailAdapter', () => {
 
       await adapter.sendOtp('recipient@example.com', '<script>alert("xss")</script>');
 
-      const call = mockTransport.sendMail.mock.calls[0][0];
+      const call = mockTransport.sendMail.mock.calls[0][0] as { text: string; html: string };
       expect(call.html).not.toContain('<script>');
       expect(call.html).toContain('&lt;script&gt;');
     });
@@ -121,7 +121,7 @@ describe('EmailAdapter', () => {
 
       await adapter.sendOtp('recipient@example.com', '123456');
 
-      const call = mockTransport.sendMail.mock.calls[0][0];
+      const call = mockTransport.sendMail.mock.calls[0][0] as { text: string; html: string };
       expect(call.text).toContain('5 minute');
       expect(call.html).toContain('5 minute');
     });

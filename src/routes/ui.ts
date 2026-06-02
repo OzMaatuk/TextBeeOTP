@@ -112,7 +112,10 @@ export function createUiRouter({ otpService, providers }: UiRouterDeps): { pages
       }
     }
 
-    html = html.replace('</head>', `${metaCsp}<script${nonce}>window.API_BASE_URL = '/ui'; window.RETURN_URL = ${JSON.stringify(returnUrl || '')};</script></head>`);
+    html = html.replace(
+      '</head>',
+      `${metaCsp}<script${nonce}>window.API_BASE_URL = '/ui'; window.RETURN_URL = ${JSON.stringify(returnUrl || '')};</script></head>`
+    );
 
     res.setHeader('Content-Type', 'text/html');
     res.send(html);

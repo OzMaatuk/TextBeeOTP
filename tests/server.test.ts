@@ -70,14 +70,10 @@ describe('createServer', () => {
       .get(`/verify?return=${encodeURIComponent(callbackUrl)}`)
       .expect(200);
 
-    expect(response.headers['content-security-policy']).toMatch(
-      /form-action\s+'self'\s+https:\/\/192\.168\.0\.100/
-    );
+    expect(response.headers['content-security-policy']).toMatch(/form-action\s+'self'\s+https:\/\/192\.168\.0\.100/);
     expect(response.text).toContain(
       `<meta http-equiv="Content-Security-Policy" content="form-action 'self' https://192.168.0.100">`
     );
-    expect(response.text).toContain(
-      `window.RETURN_URL = ${JSON.stringify(callbackUrl)}`
-    );
+    expect(response.text).toContain(`window.RETURN_URL = ${JSON.stringify(callbackUrl)}`);
   });
 });

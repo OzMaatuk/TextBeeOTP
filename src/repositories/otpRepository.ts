@@ -15,6 +15,6 @@ export interface IOtpRepository {
   incrementSendAttempts(recipient: string, windowSeconds: number): Promise<number>;
   resetSendAttempts(recipient: string): Promise<void>;
   // Health status and cleanup
-  getHealthStatus(): { [key: string]: any };
+  getHealthStatus(): Record<string, unknown>;
   destroy(): Promise<void> | void;
 }

@@ -1,5 +1,5 @@
 import { timingSafeEqual } from 'crypto';
-import type { RequestHandler } from 'express';
+import type { Request, RequestHandler, Response, NextFunction } from 'express';
 import type { Logger } from 'pino';
 import type { KeyStoreEntry } from '../utils/securityConfig.js';
 
@@ -37,11 +37,12 @@ function findMatchingKey(submittedKey: string, keys: KeyStoreEntry[]): KeyStoreE
 export function createApiKeyAuth(options: ApiKeyAuthOptions): RequestHandler {
   const { keys, healthKeys = [], logger } = options;
 
-  return (req, res, next) => {
-    const submittedKey = req.headers['x-api-key'];
-    const path = req.path;
-    const method = req.method;
-    const ip = req.ip ?? 'unknown';
+  return (req: Request, res: Response, next: NextFunction) => {
+    const typedReq = req as Request & { keyName?: string };
+    const submittedKey = typedReq.headers['x-api-key'];
+    const path = typedReq.path;
+    const method = typedReq.method;
+    const ip = typedReq.ip ?? 'unknown';
 
     if (!submittedKey || typeof submittedKey !== 'string') {
       logger.warn({ path, method, ip, reason: 'missing_key' }, 'auth_failure');
@@ -62,7 +63,7 @@ export function createApiKeyAuth(options: ApiKeyAuthOptions): RequestHandler {
     }
 
     // Attach key name for downstream use — never the key value
-    (req as any).keyName = matched.name;
+    typedReq.keyName = matched.name;
     logger.debug({ path, keyName: matched.name }, 'auth_success');
     next();
   };

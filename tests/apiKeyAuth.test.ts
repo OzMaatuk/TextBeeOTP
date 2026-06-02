@@ -1,5 +1,6 @@
 import { createApiKeyAuth } from '../src/middleware/apiKeyAuth';
 import type { Request, Response } from 'express';
+import type { Logger } from 'pino';
 import type { KeyStoreEntry } from '../src/utils/securityConfig';
 
 // --- Helpers ---
@@ -34,7 +35,7 @@ function makeMockNext(): jest.Mock {
   return jest.fn();
 }
 
-function makeMockLogger() {
+function makeMockLogger(): jest.Mocked<Logger> {
   return {
     warn: jest.fn(),
     info: jest.fn(),
@@ -42,7 +43,7 @@ function makeMockLogger() {
     debug: jest.fn(),
     fatal: jest.fn(),
     trace: jest.fn(),
-  } as any;
+  } as unknown as jest.Mocked<Logger>;
 }
 
 const VALID_KEY = 'super-secret-key-abc123';
@@ -129,7 +130,7 @@ describe('createApiKeyAuth', () => {
 
       middleware(req, res, makeMockNext());
 
-      expect((req as any).keyName).toBe('key-1');
+      expect((req as Request & { keyName?: string }).keyName).toBe('key-1');
     });
 
     it('logs debug with path and keyName — never the key value', () => {

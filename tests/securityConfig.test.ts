@@ -1,4 +1,5 @@
 import { loadSecurityConfig } from '../src/utils/securityConfig';
+import type { Logger } from 'pino';
 
 // Mock the config module
 jest.mock('../src/utils/config', () => ({
@@ -13,7 +14,7 @@ jest.mock('../src/utils/config', () => ({
 
 import { config } from '../src/utils/config';
 
-function makeMockLogger() {
+function makeMockLogger(): jest.Mocked<Logger> {
   return {
     warn: jest.fn(),
     info: jest.fn(),
@@ -21,18 +22,20 @@ function makeMockLogger() {
     debug: jest.fn(),
     fatal: jest.fn(),
     trace: jest.fn(),
-  } as any;
+  } as unknown as jest.Mocked<Logger>;
 }
 
-// Helper to set config values
-function setConfig(overrides: {
+type ConfigOverride = {
   isProduction?: boolean;
   apiKeys?: string;
   allowedOrigins?: string;
   trustProxy?: string;
   healthApiKey?: string;
-}) {
-  const c = config as any;
+};
+
+// Helper to set config values
+function setConfig(overrides: ConfigOverride) {
+  const c = config as unknown as ConfigOverride;
   c.isProduction = overrides.isProduction ?? false;
   c.apiKeys = overrides.apiKeys;
   c.allowedOrigins = overrides.allowedOrigins;
