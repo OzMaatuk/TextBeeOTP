@@ -59,26 +59,54 @@ routerAdd("POST", "/api/otp-callback", (c) => {
   const token = body.token;
   const email = body.email;
 
+  // DEBUG: Log incoming request
+  console.log("[OTP-CALLBACK] Received callback", {
+    token: token ? token.slice(0, 30) + "..." : "MISSING",
+    email: email,
+    body_keys: Object.keys(body || {}),
+  });
+
   if (!token || !email) {
+    console.log("[OTP-CALLBACK] Missing token or email");
     return c.json(400, { error: "missing_token_or_email" });
   }
 
   // Validate the token with the OTP service
+  const apiKey = $os.getenv("OTP_SERVICE_API_KEY") || "default-key";
+  console.log("[OTP-CALLBACK] Validating with API key:", apiKey ? apiKey.slice(0, 10) + "..." : "MISSING");
+  
   const res = $http.send({
     method: "GET",
     url: "http://otp.local:3000/api/auth/validate",
     headers: {
       "Authorization": "Bearer " + token,
-      "X-API-Key": process.env.OTP_SERVICE_API_KEY,
+      "X-API-Key": apiKey,
     },
   });
 
+  console.log("[OTP-CALLBACK] Validation response status:", res.statusCode);
+
   if (res.statusCode !== 200) {
+    console.log("[OTP-CALLBACK] Validation failed with status", res.statusCode);
     return c.json(401, { error: "invalid_token" });
   }
 
+  // Convert response body from byte array to string
+  let bodyStr = resp.body;
+  if (typeof bodyStr !== 'string' && bodyStr && typeof bodyStr === 'object') {
+    // It's a byte array - convert to string
+    bodyStr = String.fromCharCode(...bodyStr);
+  }
+  console.log("[OTP-CALLBACK] Response body (converted):", bodyStr.slice(0, 100));
+
   const validated = res.json();
+  console.log("[OTP-CALLBACK] Parsed validation response:", validated);
+  
   if (!validated.valid || validated.email !== email) {
+    console.log("[OTP-CALLBACK] Validation check failed", {
+      valid: validated.valid,
+      email_match: validated.email === email,
+    });
     return c.json(401, { error: "token_mismatch" });
   }
 
