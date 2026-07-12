@@ -44,7 +44,7 @@ function maskRecipient(str) {
 }
 
 // Timer functionality
-let secondsLeft = 600;
+let secondsLeft = window.OTP_TTL_SECONDS || 600;
 const timerInterval = setInterval(() => {
   secondsLeft--;
   const minutes = Math.floor(secondsLeft / 60);
@@ -128,7 +128,14 @@ form.addEventListener('submit', async (e) => {
         document.body.appendChild(f);
         f.submit();
       } else {
-        tokenDisplay.textContent = `Token: ${data.token}`;
+        const maskedToken = data.token.substring(0, 8) + '...' + data.token.substring(data.token.length - 8);
+        tokenDisplay.innerHTML = `Token: <span id="tokenVal" style="display:none;">${data.token}</span><span id="tokenMasked">${maskedToken}</span> <button id="copyTokenBtn" style="padding: 2px 8px; font-size: 11px; margin-left: 8px; width: auto; display: inline-block;">Copy</button>`;
+        document.getElementById('copyTokenBtn').addEventListener('click', () => {
+          navigator.clipboard.writeText(data.token);
+          const btn = document.getElementById('copyTokenBtn');
+          btn.textContent = 'Copied!';
+          setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+        });
       }
     } else {
       tokenDisplay.textContent = 'Verification complete. You can now proceed.';

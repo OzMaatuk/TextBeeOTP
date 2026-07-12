@@ -5,6 +5,7 @@ import pino from 'pino';
 
 const ATTEMPT_PREFIX = 'otp:attempts:';
 const RECORD_PREFIX = 'otp:record:';
+const VERIFY_ATTEMPT_PREFIX = 'otp:verify-attempts:';
 
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 1000;
@@ -176,6 +177,10 @@ export class RedisOtpRepository implements IOtpRepository {
     return `${ATTEMPT_PREFIX}${recipient}`;
   }
 
+  private verifyAttemptKey(recipient: string) {
+    return `${VERIFY_ATTEMPT_PREFIX}${recipient}`;
+  }
+
   async save(record: OtpRecord): Promise<void> {
     if (this.redisDisabled || !this.healthy) return this.fallback.save(record);
     try {
@@ -249,6 +254,34 @@ export class RedisOtpRepository implements IOtpRepository {
     } catch (_err) {
       this.healthy = false;
       return this.fallback.resetSendAttempts(recipient);
+    }
+  }
+
+  async incrementVerifyAttempts(recipient: string, windowSeconds: number): Promise<number> {
+    if (this.redisDisabled || !this.healthy) return this.fallback.incrementVerifyAttempts(recipient, windowSeconds);
+    try {
+      const key = this.verifyAttemptKey(recipient);
+      const tx = this.client.multi();
+      tx.incr(key);
+      tx.expire(key, windowSeconds);
+      const res = await tx.exec();
+      if (!res) return 0;
+      const count = Number(res[0][1]);
+      return count;
+    } catch (_err) {
+      this.healthy = false;
+      return this.fallback.incrementVerifyAttempts(recipient, windowSeconds);
+    }
+  }
+
+  async resetVerifyAttempts(recipient: string): Promise<void> {
+    if (this.redisDisabled || !this.healthy) return this.fallback.resetVerifyAttempts(recipient);
+    try {
+      const key = this.verifyAttemptKey(recipient);
+      await this.client.del(key);
+    } catch (_err) {
+      this.healthy = false;
+      return this.fallback.resetVerifyAttempts(recipient);
     }
   }
 

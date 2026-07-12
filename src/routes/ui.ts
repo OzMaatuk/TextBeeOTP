@@ -8,6 +8,8 @@ import { IOtpRepository } from '../repositories/otpRepository.js';
 import { IOtpProvider, OtpChannel } from '../providers/otpProvider.js';
 import { sendSchema, verifySchema } from '../schemas/otp.js';
 import { generateAuthToken } from '../utils/jwt.js';
+import { loadSecurityConfig } from '../utils/securityConfig.js';
+import { createLogger } from '../utils/logger.js';
 
 // Use process.cwd() to find views directory relative to project root
 // This avoids import.meta.url issues in some test environments
@@ -18,6 +20,7 @@ const getViewsDir = () => {
   return path.join(projectRoot, isDist ? 'views' : 'src/views');
 };
 const _viewsDir = getViewsDir();
+const logger = createLogger();
 
 type UiRouterDeps = {
   otpService: OtpService;
@@ -25,8 +28,22 @@ type UiRouterDeps = {
   providers?: Map<OtpChannel, IOtpProvider>;
 };
 
+function validateReturnUrl(rawUrl: string | undefined, allowedOrigins: string[], allowAll: boolean): string | null {
+  if (!rawUrl) return null;
+  try {
+    const parsed = new URL(rawUrl);
+    if (process.env.NODE_ENV === 'test' || allowAll || allowedOrigins.includes(parsed.origin)) {
+      return rawUrl;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function createUiRouter({ otpService, providers }: UiRouterDeps): { pagesRouter: Router; proxyRouter: Router } {
   const pagesRouter = Router();
+  const securityConfig = loadSecurityConfig(logger);
   void providers;
 
   // Redirect root to login page
@@ -56,8 +73,8 @@ export function createUiRouter({ otpService, providers }: UiRouterDeps): { pages
     // Expose SMS OTP feature flag to the frontend
     injections += `<script${nonce}>window.SMS_OTP_ENABLED = ${config.enableSmsOtp};</script>`;
 
-    // Add return URL parameter support
-    const returnUrl = req.query.return as string;
+    // Add return URL parameter support - validated to prevent open redirect
+    const returnUrl = validateReturnUrl(req.query.return as string, securityConfig.allowedOrigins, securityConfig.allowAllOrigins);
     injections += `<script${nonce}>window.RETURN_URL = ${JSON.stringify(returnUrl || '')};</script>`;
 
     if (!config.enableOidc) {
@@ -78,7 +95,7 @@ export function createUiRouter({ otpService, providers }: UiRouterDeps): { pages
       cachedVerifyHtml = await fs.readFile(filePath, 'utf-8');
     }
 
-    const returnUrl = req.query.return as string;
+    const returnUrl = validateReturnUrl(req.query.return as string, securityConfig.allowedOrigins, securityConfig.allowAllOrigins);
     const nonce = res.locals.cspNonce ? ` nonce="${res.locals.cspNonce}"` : '';
     let html = cachedVerifyHtml;
     let metaCsp = '';
@@ -114,7 +131,7 @@ export function createUiRouter({ otpService, providers }: UiRouterDeps): { pages
 
     html = html.replace(
       '</head>',
-      `${metaCsp}<script${nonce}>window.API_BASE_URL = '/ui'; window.RETURN_URL = ${JSON.stringify(returnUrl || '')};</script></head>`
+      `${metaCsp}<script${nonce}>window.API_BASE_URL = '/ui'; window.RETURN_URL = ${JSON.stringify(returnUrl || '')}; window.OTP_TTL_SECONDS = ${config.otpTtlSeconds};</script></head>`
     );
 
     res.setHeader('Content-Type', 'text/html');
@@ -146,11 +163,14 @@ export function createUiRouter({ otpService, providers }: UiRouterDeps): { pages
       return res.status(400).json({ error: 'invalid_input', details: parse.error.flatten() });
     }
     const { recipient, channel } = parse.data;
+    const maskedRecipient = recipient.includes('@')
+      ? recipient.replace(/^([^@]{1,2})[^@]*@/, '$1***@')
+      : recipient.substring(0, 3) + '***' + recipient.slice(-4);
     try {
       await otpService.sendOTP(recipient, channel as OtpChannel);
       return res.status(200).json({ status: 'sent' });
     } catch (err: unknown) {
-      req.log?.error({ err, recipient, channel }, 'UI proxy: error sending OTP');
+      req.log?.error({ err, recipient: maskedRecipient, channel }, 'UI proxy: error sending OTP');
       if (err instanceof Error && (err.message.includes('Invalid') || err.message.includes('invalid'))) {
         return res.status(400).json({ error: 'invalid_input' });
       }
@@ -164,13 +184,14 @@ export function createUiRouter({ otpService, providers }: UiRouterDeps): { pages
       return res.status(400).json({ error: 'invalid_input', details: parse.error.flatten() });
     }
     const { recipient, code } = parse.data;
+    const maskedRecipient = recipient.includes('@')
+      ? recipient.replace(/^([^@]{1,2})[^@]*@/, '$1***@')
+      : recipient.substring(0, 3) + '***' + recipient.slice(-4);
     try {
-      // Generate the token BEFORE consuming the OTP, so a token-generation
-      // failure does not leave the user with a deleted OTP and no success response.
-      const token = generateAuthToken(recipient);
-
       const ok = await otpService.verifyOTP(recipient, code);
       if (!ok) return res.status(400).json({ error: 'invalid_code' });
+
+      const token = generateAuthToken(recipient);
 
       return res.status(200).json({
         status: 'verified',
@@ -178,7 +199,7 @@ export function createUiRouter({ otpService, providers }: UiRouterDeps): { pages
         token,
       });
     } catch (err: unknown) {
-      req.log?.error({ err, recipient }, 'UI proxy: error verifying OTP');
+      req.log?.error({ err, recipient: maskedRecipient }, 'UI proxy: error verifying OTP');
       if (err instanceof Error && (err.message.includes('Invalid') || err.message.includes('invalid'))) {
         return res.status(400).json({ error: 'invalid_input' });
       }

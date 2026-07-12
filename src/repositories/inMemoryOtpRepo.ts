@@ -5,6 +5,7 @@ type InternalRecord = OtpRecord & { createdAt: number };
 export class InMemoryOtpRepository implements IOtpRepository {
   private store: Map<string, InternalRecord> = new Map();
   private attempts: Map<string, { count: number; expiresAt: number }> = new Map();
+  private verifyAttempts: Map<string, { count: number; expiresAt: number }> = new Map();
   private cleanupInterval: NodeJS.Timeout;
 
   constructor() {
@@ -24,6 +25,11 @@ export class InMemoryOtpRepository implements IOtpRepository {
     for (const [recipient, attempt] of this.attempts.entries()) {
       if (now > attempt.expiresAt) {
         this.attempts.delete(recipient);
+      }
+    }
+    for (const [recipient, attempt] of this.verifyAttempts.entries()) {
+      if (now > attempt.expiresAt) {
+        this.verifyAttempts.delete(recipient);
       }
     }
   }
@@ -58,6 +64,22 @@ export class InMemoryOtpRepository implements IOtpRepository {
 
   async resetSendAttempts(recipient: string): Promise<void> {
     this.attempts.delete(recipient);
+  }
+
+  async incrementVerifyAttempts(recipient: string, windowSeconds: number): Promise<number> {
+    const now = Date.now();
+    const existing = this.verifyAttempts.get(recipient);
+    if (!existing || existing.expiresAt < now) {
+      this.verifyAttempts.set(recipient, { count: 1, expiresAt: now + windowSeconds * 1000 });
+      return 1;
+    }
+    existing.count += 1;
+    this.verifyAttempts.set(recipient, existing);
+    return existing.count;
+  }
+
+  async resetVerifyAttempts(recipient: string): Promise<void> {
+    this.verifyAttempts.delete(recipient);
   }
 
   getHealthStatus(): { storage: 'in-memory'; records: number; attempts: number } {

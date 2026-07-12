@@ -1,3 +1,7 @@
+import crypto from 'crypto';
+
+let ephemeralSecret: string | null = null;
+
 function validateNumber(value: number, name: string, min?: number, max?: number): number {
   if (Number.isNaN(value)) {
     throw new Error(`Invalid ${name}: ${process.env[name]} is not a valid number`);
@@ -27,7 +31,11 @@ function readOtpSecret(): string {
   if ((process.env.NODE_ENV || 'development') === 'production') {
     throw new Error('OTP_SECRET is required in production');
   }
-  return 'local-development-secret-change-me';
+  if (!ephemeralSecret) {
+    ephemeralSecret = crypto.randomBytes(32).toString('hex');
+    console.warn('[WARNING] OTP_SECRET not configured. Generated a random ephemeral secret for this process run.');
+  }
+  return ephemeralSecret;
 }
 
 export const config = {
@@ -65,7 +73,7 @@ export const config = {
     return validateNumber(val, 'RATE_LIMIT_MAX', 1);
   },
   get verifyRateLimitMax() {
-    const val = Number(process.env.VERIFY_RATE_LIMIT_MAX || 10);
+    const val = Number(process.env.VERIFY_RATE_LIMIT_MAX || 5);
     return validateNumber(val, 'VERIFY_RATE_LIMIT_MAX', 1);
   },
   get jsonBodyLimit() {

@@ -31,13 +31,16 @@ export function createCorsMiddleware(options: CorsPolicyOptions): RequestHandler
 
     if (originMatched) {
       res.setHeader('Access-Control-Allow-Origin', origin!);
+      res.setHeader('Vary', 'Origin');
     }
     // If no match: omit the header entirely — browser will block
 
     if (req.method === 'OPTIONS') {
       if (originMatched) {
+        res.setHeader('Access-Control-Allow-Origin', origin!);
         res.setHeader('Access-Control-Allow-Methods', ALLOW_METHODS);
         res.setHeader('Access-Control-Allow-Headers', ALLOW_HEADERS);
+        res.setHeader('Vary', 'Origin');
       }
       res.status(204).end();
       return;

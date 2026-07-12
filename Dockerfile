@@ -32,5 +32,6 @@ ENV NODE_ENV=production
 COPY package*.json ./
 RUN npm install --omit=dev
 COPY --from=builder /workspace/dist ./dist
+USER node
 EXPOSE 3008
 CMD ["npm", "start"]

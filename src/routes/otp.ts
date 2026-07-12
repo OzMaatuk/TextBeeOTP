@@ -39,11 +39,15 @@ export function createOtpRouter({ otpService, repo, providers }: RouterDeps): Ro
 
     const { recipient, channel } = parse.data;
 
+    const maskedRecipient = recipient.includes('@')
+      ? recipient.replace(/^([^@]{1,2})[^@]*@/, '$1***@')
+      : recipient.substring(0, 3) + '***' + recipient.slice(-4);
+
     try {
       await otpService.sendOTP(recipient, channel as OtpChannel);
       return res.status(200).json({ status: 'sent' });
     } catch (err: unknown) {
-      req.log.error({ err, recipient, channel }, 'Error sending OTP');
+      req.log.error({ err, recipient: maskedRecipient, channel }, 'Error sending OTP');
       if (isRateLimitedError(err) && err.code === 'RATE_LIMITED') {
         return res.status(429).json({ error: 'rate_limited' });
       }
@@ -62,6 +66,9 @@ export function createOtpRouter({ otpService, repo, providers }: RouterDeps): Ro
     }
 
     const { recipient, code } = parse.data;
+    const maskedRecipient = recipient.includes('@')
+      ? recipient.replace(/^([^@]{1,2})[^@]*@/, '$1***@')
+      : recipient.substring(0, 3) + '***' + recipient.slice(-4);
 
     try {
       const ok = await otpService.verifyOTP(recipient, code);
@@ -70,7 +77,7 @@ export function createOtpRouter({ otpService, repo, providers }: RouterDeps): Ro
       }
       return res.status(200).json({ status: 'verified' });
     } catch (err: unknown) {
-      req.log.error({ err, recipient }, 'Error verifying OTP');
+      req.log.error({ err, recipient: maskedRecipient }, 'Error verifying OTP');
       // Invalid format errors should be 400
       if (err instanceof Error && (err.message.includes('Invalid') || err.message.includes('invalid'))) {
         return res.status(400).json({ error: 'invalid_input' });

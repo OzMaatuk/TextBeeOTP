@@ -18,10 +18,30 @@ export function createOtpService() {
     logger.fatal({ err }, 'Security configuration error');
     process.exit(1);
   }
+
+  if (!config.authTokenSecret) {
+    if (config.isProduction) {
+      logger.fatal('AUTH_TOKEN_SECRET is required in production');
+      process.exit(1);
+    } else {
+      logger.warn('AUTH_TOKEN_SECRET not set — /ui/otp/verify will fail to sign tokens');
+    }
+  }
+
   const repo = config.redisUrl ? new RedisOtpRepository(config.redisUrl, logger) : new InMemoryOtpRepository();
 
   if (config.redisUrl) {
-    logger.info({ redisUrl: config.redisUrl.replace(/:[^:@]+@/, ':****@') }, 'Using Redis OTP repository');
+    let maskedUrl = '[invalid redis url]';
+    try {
+      const parsed = new URL(config.redisUrl);
+      if (parsed.password) {
+        parsed.password = '****';
+      }
+      maskedUrl = parsed.toString();
+    } catch {
+      // Ignore URL parsing errors
+    }
+    logger.info({ redisUrl: maskedUrl }, 'Using Redis OTP repository');
   } else {
     logger.warn('REDIS_URL not configured, using in-memory OTP repository');
   }

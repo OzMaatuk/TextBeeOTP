@@ -55,7 +55,22 @@ export function createServer(): ServerInstance {
   // Unauthenticated lightweight endpoints — must be registered BEFORE auth middleware
   // so AppSail's startup health probe gets a fast 200 without needing an API key.
   apiApp.get('/', (_req, res) => res.status(200).send('ok'));
-  apiApp.get('/health', (_req: express.Request, res: express.Response) => {
+  apiApp.get('/health', (req: express.Request, res: express.Response) => {
+    const submittedKey = req.headers['x-api-key'];
+    const allKeys = [...securityConfig.apiKeys, ...(securityConfig.healthApiKey ? [securityConfig.healthApiKey] : [])];
+    const hasValidKey = typeof submittedKey === 'string' && allKeys.some(k => {
+      if (k.key.length !== submittedKey.length) return false;
+      try {
+        return crypto.timingSafeEqual(Buffer.from(k.key, 'utf8'), Buffer.from(submittedKey, 'utf8'));
+      } catch {
+        return false;
+      }
+    });
+
+    if (!hasValidKey) {
+      return res.json({ status: 'ok' });
+    }
+
     res.json({
       status: 'ok',
       timestamp: new Date().toISOString(),

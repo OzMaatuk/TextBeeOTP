@@ -56,3 +56,11 @@ docs/
 
 # SSL certificates (local dev only)
 certs/
+
+# Zoho Catalyst configurations
+app-config.json
+.catalystrc
+catalyst.json
+
+# Additional env configurations
+.env.*

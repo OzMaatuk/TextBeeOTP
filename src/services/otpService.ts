@@ -60,13 +60,25 @@ export class OtpService {
   async verifyOTP(recipient: string, code: string): Promise<boolean> {
     const normalizedRecipient = normalizeRecipient(recipient);
     const record = await this.repo.get(normalizedRecipient);
-    if (!record || record.isExpired() || !timingSafeOtpEqual(record.code, normalizedRecipient, code)) {
+    if (!record || record.isExpired()) {
+      return false;
+    }
+
+    const attempts = await this.repo.incrementVerifyAttempts(normalizedRecipient, this.ttlSeconds);
+    if (attempts > 5) {
+      await this.repo.delete(normalizedRecipient);
+      await this.repo.resetVerifyAttempts(normalizedRecipient);
+      return false;
+    }
+
+    if (!timingSafeOtpEqual(record.code, normalizedRecipient, code)) {
       return false;
     }
 
     // invalidate after successful verification
     await this.repo.delete(normalizedRecipient);
     await this.repo.resetSendAttempts(normalizedRecipient);
+    await this.repo.resetVerifyAttempts(normalizedRecipient);
     return true;
   }
 }

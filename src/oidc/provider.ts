@@ -2,6 +2,8 @@ import type { Express } from 'express';
 import type Provider from 'oidc-provider';
 import { config } from '../utils/config.js';
 import { createLogger } from '../utils/logger.js';
+import { createApiKeyAuth } from '../middleware/apiKeyAuth.js';
+import { loadSecurityConfig } from '../utils/securityConfig.js';
 
 const logger = createLogger();
 
@@ -34,13 +36,19 @@ const externalAccounts = new Map<string, ExternalAccount>();
  * For OTP-based authentication, use the /otp endpoints directly.
  */
 export async function createOidcProvider(app: Express): Promise<Provider> {
-  const { default: Provider } = (await import('oidc-provider')) as { default: typeof Provider };
+  const { default: OidcProvider } = (await import('oidc-provider')) as any;
   const { v4: uuidv4 } = await import('uuid');
   const baseUrl = config.oidcServerUrl || `http://localhost:${config.apiPort}`;
   const clientId = config.oidcClientId || 'oauth2-proxy';
-  const clientSecret = config.oidcClientSecret || uuidv4();
 
-  const provider = new Provider(baseUrl, {
+  if (config.enableOidc && config.isProduction && !config.oidcClientSecret) {
+    throw new Error('OIDC_CLIENT_SECRET is required in production when OIDC is enabled');
+  }
+
+  const clientSecret = config.oidcClientSecret || uuidv4();
+  const securityConfig = loadSecurityConfig(logger);
+
+  const provider = new OidcProvider(baseUrl, {
     clients: [
       {
         client_id: clientId,
@@ -137,42 +145,38 @@ export async function createOidcProvider(app: Express): Promise<Provider> {
     }
   });
 
-  // Internal endpoint to create/update account from external provider
-  app.post('/oauth2/account', (req, res) => {
-    const { sub, email, email_verified, name, picture, provider: authProvider } = req.body;
+  // Internal endpoint to create/update account from external provider - secured with API key
+  app.post(
+    '/oauth2/account',
+    createApiKeyAuth({
+      keys: securityConfig.apiKeys,
+      healthKeys: securityConfig.healthApiKey ? [securityConfig.healthApiKey] : [],
+      logger,
+    }),
+    (req, res) => {
+      const { sub, email, email_verified, name, picture, provider: authProvider } = req.body;
 
-    if (!sub) {
-      return res.status(400).json({ error: 'Missing sub (subject) from external provider' });
+      if (!sub) {
+        return res.status(400).json({ error: 'Missing sub (subject) from external provider' });
+      }
+
+      const accountId = `${authProvider}_${uuidv4()}`;
+      const account: ExternalAccount = {
+        accountId,
+        sub,
+        email,
+        email_verified: email_verified || false,
+        name,
+        picture,
+        provider: authProvider,
+      };
+
+      externalAccounts.set(accountId, account);
+      logger.info({ accountId, provider: authProvider, email }, 'Created account from external provider');
+
+      res.json({ accountId, sub: accountId });
     }
-
-    const accountId = `${authProvider}_${uuidv4()}`;
-    const account: ExternalAccount = {
-      accountId,
-      sub,
-      email,
-      email_verified: email_verified || false,
-      name,
-      picture,
-      provider: authProvider,
-    };
-
-    externalAccounts.set(accountId, account);
-    logger.info({ accountId, provider: authProvider, email }, 'Created account from external provider');
-
-    res.json({ accountId, sub: accountId });
-  });
-
-  // Endpoint to get account info (for testing)
-  app.get('/oauth2/account/:accountId', (req, res) => {
-    const { accountId } = req.params;
-    const account = externalAccounts.get(accountId);
-
-    if (!account) {
-      return res.status(404).json({ error: 'Account not found' });
-    }
-
-    res.json(account);
-  });
+  );
 
   logger.info(
     { clientId, issuer: baseUrl, redirectUris: config.oidcRedirectUris },
