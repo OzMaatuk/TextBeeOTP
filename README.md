@@ -156,6 +156,14 @@ For local development:
 REDIS_URL=redis://localhost:6379
 ```
 
+For local run using the docker-compose:
+edit the following lines in docker-compose.yml
+```bash
+    command: redis-server --appendonly yes --requirepass "YOUR_REDIS_PASSWORD"
+      test: ['CMD', 'redis-cli', '-a', 'YOUR_REDIS_PASSWORD', 'ping']
+      - REDIS_URL=redis://default:YOUR_REDIS_PASSWORD@redis:6379
+```
+
 ### 4. Development
 
 1. Install dependencies

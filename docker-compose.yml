@@ -5,7 +5,7 @@ services:
     image: redis:7-alpine
     container_name: otp_redis
     restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass "OP7DMzZwYLgPALF2l70vAJfF2CKCG5h3"
+    command: redis-server --appendonly yes --requirepass "YOUR_REDIS_PASSWORD"
     volumes:
       - redis_data:/data
     ports:
@@ -13,7 +13,7 @@ services:
     networks:
       - dev_network
     healthcheck:
-      test: ['CMD', 'redis-cli', '-a', 'OP7DMzZwYLgPALF2l70vAJfF2CKCG5h3', 'ping']
+      test: ['CMD', 'redis-cli', '-a', 'YOUR_REDIS_PASSWORD', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -32,7 +32,7 @@ services:
     working_dir: /workspace
     environment:
       - NODE_ENV=development
-      - REDIS_URL=redis://default:OP7DMzZwYLgPALF2l70vAJfF2CKCG5h3@redis:6379
+      - REDIS_URL=redis://default:YOUR_REDIS_PASSWORD@redis:6379
     env_file:
       - .env
     depends_on:
