@@ -1,3 +1,4 @@
+process.env.AUTH_TOKEN_SECRET = 'test-secret';
 /** @type {import('ts-jest').JestConfigWithTsJest} */
 module.exports = {
   testEnvironment: 'node',
